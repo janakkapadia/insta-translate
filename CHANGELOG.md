@@ -1,12 +1,11 @@
 # Release Notes
 
-## [Unreleased](https://github.com/janakkapadia/insta-translate/compare/v0.0.1 Initial Release...HEAD)
+## [Unreleased](https://github.com/janakkapadia/insta-translate/compare/0.1.0...HEAD)
 
-## [v0.0.1 Initial Release](https://github.com/janakkapadia/insta-translate/compare/v0.1.0...v0.0.1 Initial Release) - 2026-07-19
+## [0.1.0](https://github.com/janakkapadia/insta-translate/compare/0.0.5...0.1.0) - 2026-07-19
 
-<!-- Release notes generated using configuration in .github/release.yml at main -->
-**Full Changelog**: https://github.com/janakkapadia/insta-translate/commits/0.0.1
-
-## [v0.1.0](https://github.com/janakkapadia/insta-translate/compare/...v0.1.0) - 202x-xx-xx
-
-Initial pre-release.
+### Added
+- Renamed package to `insta-translate`.
+- Changed config keys to `insta-translate.*` and `INSTA_TRANSLATE_*`.
+- Added support for `--key` specific translations.
+- Fixed PHPStan type coverage issues and Laravel path configuration.
