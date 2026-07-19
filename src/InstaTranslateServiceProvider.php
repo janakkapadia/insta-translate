@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace InstaRequest\InstaTranslate;
 
-use InstaRequest\InstaTranslate\Console\Commands\TranslationGenerateCommand;
 use Illuminate\Support\ServiceProvider;
+use InstaRequest\InstaTranslate\Console\Commands\TranslationGenerateCommand;
 
 class InstaTranslateServiceProvider extends ServiceProvider
 {

@@ -7,6 +7,7 @@ namespace InstaRequest\InstaTranslate\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
+use Symfony\Component\Finder\SplFileInfo;
 
 class TranslationGenerateCommand extends Command
 {
@@ -31,49 +32,51 @@ class TranslationGenerateCommand extends Command
     public function handle(): int
     {
         $this->line('Translation generation started.');
-        
+
         $defaultLang = config('insta-translate.default_language', 'en');
         $langDir = rtrim(config('insta-translate.lang_path', base_path('lang')), '/');
-        $baseLangFile = $langDir . '/' . $defaultLang . '.json';
-        
-        if (!File::exists($baseLangFile)) {
+        $baseLangFile = $langDir.'/'.$defaultLang.'.json';
+
+        if (! File::exists($baseLangFile)) {
             $this->error("Base language file {$defaultLang}.json does not exist.");
+
             return self::FAILURE;
         }
 
         $baseTranslations = json_decode(File::get($baseLangFile), true);
-        
-        if (!is_array($baseTranslations)) {
+
+        if (! is_array($baseTranslations)) {
             $this->error("Invalid {$defaultLang}.json format.");
+
             return self::FAILURE;
         }
 
-        $batchSize = (int) $this->option('batch');
-        $model = $this->option('model') ?: config('insta-translate.default_model', 'claude');
-        $translateAll = $this->option('all');
-        $specificKeys = $this->option('key');
+        $batchSize = max(1, (int) $this->option('batch'));
+        $model = is_string($this->option('model')) ? $this->option('model') : (string) config('insta-translate.default_model', 'claude');
+        $translateAll = (bool) $this->option('all');
+        $specificKeys = (array) $this->option('key');
 
-        $langOption = $this->option('lang');
+        $langOption = is_string($this->option('lang')) ? $this->option('lang') : null;
 
         if ($langOption) {
-            $localeFile = str_ends_with($langOption, '.json') ? $langOption : $langOption . '.json';
+            $localeFile = str_ends_with($langOption, '.json') ? $langOption : $langOption.'.json';
             $locales = collect([$localeFile]);
         } else {
             $locales = collect(File::files($langDir))
-                ->map(fn ($file) => $file->getFilename())
-                ->filter(fn ($file) => str_ends_with($file, '.json') && $file !== $defaultLang . '.json' && !str_starts_with($file, 'php_'));
+                ->map(fn (SplFileInfo $file) => $file->getFilename())
+                ->filter(fn (string $file) => str_ends_with($file, '.json') && $file !== $defaultLang.'.json' && ! str_starts_with($file, 'php_'));
         }
 
         foreach ($locales as $localeFile) {
-            $localePath = $langDir . '/' . $localeFile;
+            $localePath = $langDir.'/'.$localeFile;
             $targetLocale = str_replace('.json', '', $localeFile);
             $this->info("Processing locale: {$targetLocale}");
-            
+
             $existingTranslations = File::exists($localePath) ? json_decode(File::get($localePath), true) ?? [] : [];
-            
+
             $missingKeys = [];
-            
-            if (!empty($specificKeys)) {
+
+            if (! empty($specificKeys)) {
                 foreach ($specificKeys as $key) {
                     if (isset($baseTranslations[$key])) {
                         $missingKeys[$key] = $baseTranslations[$key];
@@ -83,7 +86,7 @@ class TranslationGenerateCommand extends Command
                 }
             } else {
                 foreach ($baseTranslations as $key => $value) {
-                    if ($translateAll || !isset($existingTranslations[$key])) {
+                    if ($translateAll || ! isset($existingTranslations[$key])) {
                         $missingKeys[$key] = $value;
                     }
                 }
@@ -91,40 +94,46 @@ class TranslationGenerateCommand extends Command
 
             if (empty($missingKeys)) {
                 $this->line("No missing translations for {$targetLocale}.");
+
                 continue;
             }
 
-            $this->info("Found " . count($missingKeys) . " missing keys for {$targetLocale}.");
+            $this->info('Found '.count($missingKeys)." missing keys for {$targetLocale}.");
 
             $chunks = array_chunk($missingKeys, $batchSize, true);
-            
+
             foreach ($chunks as $index => $chunk) {
-                $this->line("Translating batch " . ($index + 1) . " of " . count($chunks) . "...");
-                
+                $this->line('Translating batch '.($index + 1).' of '.count($chunks).'...');
+
                 $translatedChunk = $this->translateChunk($chunk, $targetLocale, $model, $defaultLang);
-                
+
                 if ($translatedChunk) {
                     $existingTranslations = array_merge($existingTranslations, $translatedChunk);
                 } else {
-                    $this->error("Failed to translate batch " . ($index + 1) . ". Skipping.");
+                    $this->error('Failed to translate batch '.($index + 1).'. Skipping.');
                 }
             }
 
             // Save the updated translations, sorted by key for consistency
             ksort($existingTranslations);
-            File::put($localePath, json_encode($existingTranslations, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            File::put($localePath, json_encode($existingTranslations, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) ?: '{}');
             $this->info("Saved {$localeFile}.");
         }
 
         $this->info('Translation generation complete.');
+
         return self::SUCCESS;
     }
 
+    /**
+     * @param  array<string, string>  $chunk
+     * @return array<string, string>|null
+     */
     private function translateChunk(array $chunk, string $targetLocale, string $model, string $defaultLang): ?array
     {
-        $prompt = "Translate the following JSON key-value pairs from {$defaultLang} to {$targetLocale}. " .
-            "Keep the keys exactly the same. Do not translate placeholders like :name or {value}. " .
-            "Return ONLY a valid JSON object without markdown formatting or other text.\n\n" .
+        $prompt = "Translate the following JSON key-value pairs from {$defaultLang} to {$targetLocale}. ".
+            'Keep the keys exactly the same. Do not translate placeholders like :name or {value}. '.
+            "Return ONLY a valid JSON object without markdown formatting or other text.\n\n".
             json_encode($chunk, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 
         $actualModel = $this->resolveModelName($model);
@@ -136,6 +145,7 @@ class TranslationGenerateCommand extends Command
         }
 
         $this->error("Unknown or unsupported model prefix: {$actualModel}");
+
         return null;
     }
 
@@ -144,20 +154,24 @@ class TranslationGenerateCommand extends Command
         if ($model === 'claude') {
             return 'claude-3-5-sonnet-20241022';
         }
-        
+
         if ($model === 'gemini') {
             return 'gemini-1.5-flash';
         }
-        
+
         return $model;
     }
 
+    /**
+     * @return array<string, string>|null
+     */
     private function callClaude(string $prompt, string $model): ?array
     {
         $apiKey = config('insta-translate.claude_key');
-        
+
         if (empty($apiKey)) {
             $this->error('Claude API key is missing.');
+
             return null;
         }
 
@@ -169,26 +183,31 @@ class TranslationGenerateCommand extends Command
             'model' => $model,
             'max_tokens' => 4096,
             'messages' => [
-                ['role' => 'user', 'content' => $prompt]
-            ]
+                ['role' => 'user', 'content' => $prompt],
+            ],
         ]);
 
-        if (!$response->successful()) {
-            $this->error("Claude API Error: " . $response->body());
+        if (! $response->successful()) {
+            $this->error('Claude API Error: '.$response->body());
+
             return null;
         }
 
         $content = $response->json('content.0.text');
-        
+
         return $this->parseJsonResponse($content);
     }
 
+    /**
+     * @return array<string, string>|null
+     */
     private function callGemini(string $prompt, string $model): ?array
     {
         $apiKey = config('insta-translate.gemini_key');
-        
+
         if (empty($apiKey)) {
             $this->error('Gemini API key is missing.');
+
             return null;
         }
 
@@ -198,28 +217,32 @@ class TranslationGenerateCommand extends Command
             'contents' => [
                 [
                     'parts' => [
-                        ['text' => $prompt]
-                    ]
-                ]
+                        ['text' => $prompt],
+                    ],
+                ],
             ],
             'generationConfig' => [
                 'responseMimeType' => 'application/json',
-            ]
+            ],
         ]);
 
-        if (!$response->successful()) {
-            $this->error("Gemini API Error: " . $response->body());
+        if (! $response->successful()) {
+            $this->error('Gemini API Error: '.$response->body());
+
             return null;
         }
 
         $content = $response->json('candidates.0.content.parts.0.text');
-        
+
         return $this->parseJsonResponse($content);
     }
 
+    /**
+     * @return array<string, string>|null
+     */
     private function parseJsonResponse(?string $content): ?array
     {
-        if (!$content) {
+        if (! $content) {
             return null;
         }
 
@@ -228,10 +251,11 @@ class TranslationGenerateCommand extends Command
         $content = preg_replace('/```\s*(.*?)\s*```/s', '$1', $content);
 
         $decoded = json_decode($content, true);
-        
+
         if (json_last_error() !== JSON_ERROR_NONE) {
-            $this->error('Failed to parse JSON response: ' . json_last_error_msg());
-            $this->line('Raw response: ' . $content);
+            $this->error('Failed to parse JSON response: '.json_last_error_msg());
+            $this->line('Raw response: '.$content);
+
             return null;
         }
 

@@ -2,6 +2,6 @@
 
 declare(strict_types=1);
 
-use AiTranslator\AiTranslator\Tests\TestCase;
+use InstaRequest\InstaTranslate\Tests\TestCase;
 
 uses(TestCase::class)->in(__DIR__);
