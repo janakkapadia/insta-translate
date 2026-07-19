@@ -2,21 +2,19 @@
 
 declare(strict_types=1);
 
-namespace InstaRequest\AiTranslator;
+namespace InstaRequest\InstaTranslate;
 
-use InstaRequest\AiTranslator\Console\Commands\TranslationGenerateCommand;
+use InstaRequest\InstaTranslate\Console\Commands\TranslationGenerateCommand;
 use Illuminate\Support\ServiceProvider;
 
-class AiTranslatorServiceProvider extends ServiceProvider
+class InstaTranslateServiceProvider extends ServiceProvider
 {
     /**
      * Register any application services.
      */
     public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__.'/../config/ai-translator.php', 'ai-translator');
-
-        $this->app->singleton(AiTranslator::class);
+        $this->mergeConfigFrom(__DIR__.'/../config/insta-translate.php', 'insta-translate');
     }
 
     /**
@@ -29,8 +27,8 @@ class AiTranslatorServiceProvider extends ServiceProvider
         }
 
         $this->publishes([
-            __DIR__.'/../config/ai-translator.php' => config_path('ai-translator.php'),
-        ], ['ai-translator', 'ai-translator-config']);
+            __DIR__.'/../config/insta-translate.php' => config_path('insta-translate.php'),
+        ], ['insta-translate', 'insta-translate-config']);
 
         $this->commands([
             TranslationGenerateCommand::class,

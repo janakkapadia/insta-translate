@@ -1,13 +1,13 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "janakkapadia/ai-translator",
+    "name": "janakkapadia/insta-translate",
     "description": "",
     "keywords": [
         "laravel",
         "janakkapadia",
-        "ai-translator"
+        "insta-translate"
     ],
-    "homepage": "https://github.com/instarequest/ai-translator",
+    "homepage": "https://github.com/instarequest/insta-translate",
     "license": "MIT",
     "authors": [
         {
@@ -32,12 +32,12 @@
     },
     "autoload": {
         "psr-4": {
-            "InstaRequest\\AiTranslator\\": "src/"
+            "InstaRequest\\InstaTranslate\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "InstaRequest\\AiTranslator\\Tests\\": "tests/",
+            "InstaRequest\\InstaTranslate\\Tests\\": "tests/",
             "Workbench\\App\\": "workbench/app/",
             "Workbench\\Database\\Factories\\": "workbench/database/factories/",
             "Workbench\\Database\\Seeders\\": "workbench/database/seeders/"
@@ -87,7 +87,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "InstaRequest\\AiTranslator\\AiTranslatorServiceProvider"
+                "InstaRequest\\InstaTranslate\\InstaTranslateServiceProvider"
             ]
         }
     },

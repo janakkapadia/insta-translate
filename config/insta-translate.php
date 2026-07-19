@@ -9,7 +9,7 @@ return [
     | Supported models: "claude", "gemini"
     |
     */
-    'default_model' => env('AI_TRANSLATOR_MODEL', 'claude'),
+    'default_model' => env('INSTA_TRANSLATE_MODEL', 'claude'),
 
     /*
     |--------------------------------------------------------------------------
@@ -19,15 +19,15 @@ return [
     | The default language code to use as the base for translations.
     |
     */
-    'default_language' => env('AI_TRANSLATOR_DEFAULT_LANGUAGE', 'en'),
+    'default_language' => env('INSTA_TRANSLATE_DEFAULT_LANGUAGE', 'en'),
 
     /*
     |--------------------------------------------------------------------------
     | API Keys
     |--------------------------------------------------------------------------
     */
-    'claude_key' => env('AI_TRANSLATOR_CLAUDE_KEY'),
-    'gemini_key' => env('AI_TRANSLATOR_GEMINI_KEY'),
+    'claude_key' => env('INSTA_TRANSLATE_CLAUDE_KEY'),
+    'gemini_key' => env('INSTA_TRANSLATE_GEMINI_KEY'),
 
     /*
     |--------------------------------------------------------------------------
@@ -37,5 +37,5 @@ return [
     | The path where the JSON translation files are stored.
     |
     */
-    'lang_path' => env('AI_TRANSLATOR_LANG_PATH', base_path('lang')),
+    'lang_path' => env('INSTA_TRANSLATE_LANG_PATH', base_path('lang')),
 ];

@@ -1,4 +1,4 @@
-# AI Translator for Laravel
+# InstaTranslate for Laravel
 
 A lightweight, local Laravel package that leverages Claude and Gemini LLMs to automatically translate language strings for your application. It replaces traditional translation management platforms by using AI to directly sync and translate missing keys in your `lang/*.json` files.
 
@@ -25,28 +25,28 @@ This package is installed locally via a path repository. It is already registere
 
 ## Configuration
 
-Add the following environment variables to your `.env` file to configure the AI Translator:
+Add the following environment variables to your `.env` file to configure InstaTranslate:
 
 ```env
 # Set the default model (e.g., claude-3-5-sonnet-20241022, gemini-1.5-pro)
 # "claude" and "gemini" are also accepted as shorthands for default models.
-AI_TRANSLATOR_MODEL=claude
+INSTA_TRANSLATE_MODEL=claude
 
 # Path to your language files (defaults to the laravel lang directory)
-AI_TRANSLATOR_LANG_PATH=./lang
+INSTA_TRANSLATE_LANG_PATH=./lang
 
 # The base language to translate from (defaults to "en")
-AI_TRANSLATOR_DEFAULT_LANGUAGE=en
+INSTA_TRANSLATE_DEFAULT_LANGUAGE=en
 
 # Add your API Keys
-AI_TRANSLATOR_CLAUDE_KEY=your_anthropic_api_key_here
-AI_TRANSLATOR_GEMINI_KEY=your_google_gemini_api_key_here
+INSTA_TRANSLATE_CLAUDE_KEY=your_anthropic_api_key_here
+INSTA_TRANSLATE_GEMINI_KEY=your_google_gemini_api_key_here
 ```
 
 You can optionally publish the configuration file to customize the default model behavior:
 
 ```bash
-php artisan vendor:publish --tag="ai-translator-config"
+php artisan vendor:publish --tag="insta-translate-config"
 ```
 
 ## Usage

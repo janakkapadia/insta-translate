@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace InstaRequest\AiTranslator\Console\Commands;
+namespace InstaRequest\InstaTranslate\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
@@ -32,8 +32,8 @@ class TranslationGenerateCommand extends Command
     {
         $this->line('Translation generation started.');
         
-        $defaultLang = config('ai-translator.default_language', 'en');
-        $langDir = rtrim(config('ai-translator.lang_path', base_path('lang')), '/');
+        $defaultLang = config('insta-translate.default_language', 'en');
+        $langDir = rtrim(config('insta-translate.lang_path', base_path('lang')), '/');
         $baseLangFile = $langDir . '/' . $defaultLang . '.json';
         
         if (!File::exists($baseLangFile)) {
@@ -49,7 +49,7 @@ class TranslationGenerateCommand extends Command
         }
 
         $batchSize = (int) $this->option('batch');
-        $model = $this->option('model') ?: config('ai-translator.default_model', 'claude');
+        $model = $this->option('model') ?: config('insta-translate.default_model', 'claude');
         $translateAll = $this->option('all');
         $specificKeys = $this->option('key');
 
@@ -154,7 +154,7 @@ class TranslationGenerateCommand extends Command
 
     private function callClaude(string $prompt, string $model): ?array
     {
-        $apiKey = config('ai-translator.claude_key');
+        $apiKey = config('insta-translate.claude_key');
         
         if (empty($apiKey)) {
             $this->error('Claude API key is missing.');
@@ -185,7 +185,7 @@ class TranslationGenerateCommand extends Command
 
     private function callGemini(string $prompt, string $model): ?array
     {
-        $apiKey = config('ai-translator.gemini_key');
+        $apiKey = config('insta-translate.gemini_key');
         
         if (empty($apiKey)) {
             $this->error('Gemini API key is missing.');
