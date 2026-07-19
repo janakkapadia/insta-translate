@@ -59,7 +59,7 @@ class TranslationGenerateCommand extends Command
         } else {
             $locales = collect(File::files($langDir))
                 ->map(fn ($file) => $file->getFilename())
-                ->filter(fn ($file) => str_ends_with($file, '.json') && $file !== $defaultLang . '.json');
+                ->filter(fn ($file) => str_ends_with($file, '.json') && $file !== $defaultLang . '.json' && !str_starts_with($file, 'php_'));
         }
 
         foreach ($locales as $localeFile) {
