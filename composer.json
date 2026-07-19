@@ -1,6 +1,6 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "instarequest/ai-translator",
+    "name": "janakkapadia/ai-translator",
     "description": "",
     "keywords": [
         "laravel",
