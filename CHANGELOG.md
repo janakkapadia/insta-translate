@@ -1,6 +1,11 @@
 # Release Notes
 
-## [Unreleased](https://github.com/janakkapadia/insta-translate/compare/0.1.0...HEAD)
+## [Unreleased](https://github.com/janakkapadia/insta-translate/compare/0.1.1...HEAD)
+
+## [0.1.1](https://github.com/janakkapadia/insta-translate/compare/0.1.0...0.1.1) - 2026-07-19
+
+### Fixed
+- Updated `homepage` URL in `composer.json` to the correct repository link.
 
 ## [0.1.0](https://github.com/janakkapadia/insta-translate/compare/0.0.5...0.1.0) - 2026-07-19
 
