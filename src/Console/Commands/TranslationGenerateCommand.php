@@ -31,18 +31,19 @@ class TranslationGenerateCommand extends Command
     {
         $this->line('Translation generation started.');
         
+        $defaultLang = config('ai-translator.default_language', 'en');
         $langDir = rtrim(config('ai-translator.lang_path', base_path('lang')), '/');
-        $baseLangFile = $langDir . '/en.json';
+        $baseLangFile = $langDir . '/' . $defaultLang . '.json';
         
         if (!File::exists($baseLangFile)) {
-            $this->error('Base language file en.json does not exist.');
+            $this->error("Base language file {$defaultLang}.json does not exist.");
             return self::FAILURE;
         }
 
         $baseTranslations = json_decode(File::get($baseLangFile), true);
         
         if (!is_array($baseTranslations)) {
-            $this->error('Invalid en.json format.');
+            $this->error("Invalid {$defaultLang}.json format.");
             return self::FAILURE;
         }
 
@@ -58,7 +59,7 @@ class TranslationGenerateCommand extends Command
         } else {
             $locales = collect(File::files($langDir))
                 ->map(fn ($file) => $file->getFilename())
-                ->filter(fn ($file) => str_ends_with($file, '.json') && $file !== 'en.json');
+                ->filter(fn ($file) => str_ends_with($file, '.json') && $file !== $defaultLang . '.json');
         }
 
         foreach ($locales as $localeFile) {
@@ -87,7 +88,7 @@ class TranslationGenerateCommand extends Command
             foreach ($chunks as $index => $chunk) {
                 $this->line("Translating batch " . ($index + 1) . " of " . count($chunks) . "...");
                 
-                $translatedChunk = $this->translateChunk($chunk, $targetLocale, $model);
+                $translatedChunk = $this->translateChunk($chunk, $targetLocale, $model, $defaultLang);
                 
                 if ($translatedChunk) {
                     $existingTranslations = array_merge($existingTranslations, $translatedChunk);
@@ -106,9 +107,9 @@ class TranslationGenerateCommand extends Command
         return self::SUCCESS;
     }
 
-    private function translateChunk(array $chunk, string $targetLocale, string $model): ?array
+    private function translateChunk(array $chunk, string $targetLocale, string $model, string $defaultLang): ?array
     {
-        $prompt = "Translate the following JSON key-value pairs from English to {$targetLocale}. " .
+        $prompt = "Translate the following JSON key-value pairs from {$defaultLang} to {$targetLocale}. " .
             "Keep the keys exactly the same. Do not translate placeholders like :name or {value}. " .
             "Return ONLY a valid JSON object without markdown formatting or other text.\n\n" .
             json_encode($chunk, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);

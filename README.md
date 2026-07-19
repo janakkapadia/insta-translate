@@ -35,6 +35,9 @@ AI_TRANSLATOR_MODEL=claude
 # Path to your language files (defaults to the laravel lang directory)
 AI_TRANSLATOR_LANG_PATH=./lang
 
+# The base language to translate from (defaults to "en")
+AI_TRANSLATOR_DEFAULT_LANGUAGE=en
+
 # Add your API Keys
 AI_TRANSLATOR_CLAUDE_KEY=your_anthropic_api_key_here
 AI_TRANSLATOR_GEMINI_KEY=your_google_gemini_api_key_here
@@ -65,8 +68,8 @@ php artisan translation:generate
 
 ### How It Works
 
-1. The command reads the base `en.json` file.
+1. The command reads the base language file (e.g., `en.json` by default).
 2. It iterates over all other `.json` files in your `lang/` directory (e.g., `hi.json`, `fr.json`, `de.json`).
-3. For each file, it identifies which keys exist in `en.json` but are missing in the target locale (unless `--all` is passed).
+3. For each file, it identifies which keys exist in the base file but are missing in the target locale (unless `--all` is passed).
 4. The missing keys are batched and sent to the selected AI model via a strict JSON prompt.
 5. The translations are merged with the existing translations, sorted alphabetically by key, and saved back to the JSON file.
