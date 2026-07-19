@@ -1,6 +1,11 @@
 # Release Notes
 
-## [Unreleased](https://github.com/janakkapadia/insta-translate/compare/0.1.1...HEAD)
+## [Unreleased](https://github.com/janakkapadia/insta-translate/compare/0.1.2...HEAD)
+
+## [0.1.2](https://github.com/janakkapadia/insta-translate/compare/0.1.1...0.1.2) - 2026-07-19
+
+### Added
+- Added interactive prompts when using `--key` to ask for the target language and confirm whether to overwrite existing translations.
 
 ## [0.1.1](https://github.com/janakkapadia/insta-translate/compare/0.1.0...0.1.1) - 2026-07-19
 

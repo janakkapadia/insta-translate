@@ -58,6 +58,14 @@ class TranslationGenerateCommand extends Command
 
         $langOption = is_string($this->option('lang')) ? $this->option('lang') : null;
 
+        if (! empty($specificKeys) && ! $langOption) {
+            $langOption = $this->ask('For which language code do you want to translate these keys? (Leave empty for all available languages)');
+
+            if (empty($langOption)) {
+                $langOption = null;
+            }
+        }
+
         if ($langOption) {
             $localeFile = str_ends_with($langOption, '.json') ? $langOption : $langOption.'.json';
             $locales = collect([$localeFile]);
@@ -79,6 +87,11 @@ class TranslationGenerateCommand extends Command
             if (! empty($specificKeys)) {
                 foreach ($specificKeys as $key) {
                     if (isset($baseTranslations[$key])) {
+                        if (isset($existingTranslations[$key]) && ! $translateAll) {
+                            if (! $this->confirm("Key '{$key}' already exists in {$targetLocale}. Do you want to regenerate it?", false)) {
+                                continue;
+                            }
+                        }
                         $missingKeys[$key] = $baseTranslations[$key];
                     } else {
                         $this->warn("Key '{$key}' not found in {$defaultLang}.json. Skipping.");
