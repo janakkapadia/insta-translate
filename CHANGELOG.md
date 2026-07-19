@@ -1,6 +1,11 @@
 # Release Notes
 
-## [Unreleased](https://github.com/janakkapadia/insta-translate/compare/0.1.2...HEAD)
+## [Unreleased](https://github.com/janakkapadia/insta-translate/compare/0.1.3...HEAD)
+
+## [0.1.3](https://github.com/janakkapadia/insta-translate/compare/0.1.2...0.1.3) - 2026-07-20
+
+### Added
+- Added `--multiple` flag to generate 3 translation options for each key and interactively prompt the user to select the best one.
 
 ## [0.1.2](https://github.com/janakkapadia/insta-translate/compare/0.1.1...0.1.2) - 2026-07-19
 

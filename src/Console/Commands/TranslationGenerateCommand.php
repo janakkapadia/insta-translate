@@ -19,6 +19,7 @@ class TranslationGenerateCommand extends Command
                             {--model= : Which model to use (e.g. claude-3-opus-20240229, gemini-1.5-pro). Overrides env config.}
                             {--lang= : Specific language code to translate/create (e.g., fr, hi).}
                             {--key=* : Specific keys to translate (can be used multiple times). Overrides the missing check.}
+                            {--multiple : Generate multiple translation options to choose from.}
                             {--all : Translate all keys, overwriting existing translations.}';
 
     /**
@@ -55,6 +56,7 @@ class TranslationGenerateCommand extends Command
         $model = is_string($this->option('model')) ? $this->option('model') : (string) config('insta-translate.default_model', 'claude');
         $translateAll = (bool) $this->option('all');
         $specificKeys = (array) $this->option('key');
+        $multiple = (bool) $this->option('multiple');
 
         $langOption = is_string($this->option('lang')) ? $this->option('lang') : null;
 
@@ -118,10 +120,19 @@ class TranslationGenerateCommand extends Command
             foreach ($chunks as $index => $chunk) {
                 $this->line('Translating batch '.($index + 1).' of '.count($chunks).'...');
 
-                $translatedChunk = $this->translateChunk($chunk, $targetLocale, $model, $defaultLang);
+                $translatedChunk = $this->translateChunk($chunk, $targetLocale, $model, $defaultLang, $multiple);
 
                 if ($translatedChunk) {
-                    $existingTranslations = array_merge($existingTranslations, $translatedChunk);
+                    foreach ($translatedChunk as $key => $value) {
+                        if ($multiple && is_array($value)) {
+                            // Flatten scalar values to strings for PHPStan, though they should be strings
+                            $options = array_map(fn (mixed $val) => (string) $val, $value);
+                            $selected = $this->choice("Select translation for '{$key}' in {$targetLocale}", $options, 0);
+                            $existingTranslations[$key] = $selected;
+                        } else {
+                            $existingTranslations[$key] = is_array($value) ? (string) ($value[0] ?? '') : (string) $value;
+                        }
+                    }
                 } else {
                     $this->error('Failed to translate batch '.($index + 1).'. Skipping.');
                 }
@@ -140,14 +151,22 @@ class TranslationGenerateCommand extends Command
 
     /**
      * @param  array<string, string>  $chunk
-     * @return array<string, string>|null
+     * @return array<string, mixed>|null
      */
-    private function translateChunk(array $chunk, string $targetLocale, string $model, string $defaultLang): ?array
+    private function translateChunk(array $chunk, string $targetLocale, string $model, string $defaultLang, bool $multiple = false): ?array
     {
-        $prompt = "Translate the following JSON key-value pairs from {$defaultLang} to {$targetLocale}. ".
-            'Keep the keys exactly the same. Do not translate placeholders like :name or {value}. '.
-            "Return ONLY a valid JSON object without markdown formatting or other text.\n\n".
-            json_encode($chunk, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        if ($multiple) {
+            $prompt = "Translate the following JSON key-value pairs from {$defaultLang} to {$targetLocale}. ".
+                'Keep the keys exactly the same. Do not translate placeholders like :name or {value}. '.
+                'Provide 3 distinct translation variations for each key. '.
+                "Return ONLY a valid JSON object where keys are the same, and the value is a JSON array of 3 strings. No markdown formatting or other text.\n\n".
+                json_encode($chunk, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        } else {
+            $prompt = "Translate the following JSON key-value pairs from {$defaultLang} to {$targetLocale}. ".
+                'Keep the keys exactly the same. Do not translate placeholders like :name or {value}. '.
+                "Return ONLY a valid JSON object without markdown formatting or other text.\n\n".
+                json_encode($chunk, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        }
 
         $actualModel = $this->resolveModelName($model);
 
@@ -176,7 +195,7 @@ class TranslationGenerateCommand extends Command
     }
 
     /**
-     * @return array<string, string>|null
+     * @return array<string, mixed>|null
      */
     private function callClaude(string $prompt, string $model): ?array
     {
@@ -212,7 +231,7 @@ class TranslationGenerateCommand extends Command
     }
 
     /**
-     * @return array<string, string>|null
+     * @return array<string, mixed>|null
      */
     private function callGemini(string $prompt, string $model): ?array
     {
@@ -251,7 +270,7 @@ class TranslationGenerateCommand extends Command
     }
 
     /**
-     * @return array<string, string>|null
+     * @return array<string, mixed>|null
      */
     private function parseJsonResponse(?string $content): ?array
     {
