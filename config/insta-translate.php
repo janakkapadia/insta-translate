@@ -38,4 +38,14 @@ return [
     |
     */
     'lang_path' => env('INSTA_TRANSLATE_LANG_PATH', base_path('lang')),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Retry Attempts
+    |--------------------------------------------------------------------------
+    |
+    | The number of times to retry an API request if it fails.
+    |
+    */
+    'retry_attempts' => env('INSTA_TRANSLATE_RETRY_ATTEMPTS', 3),
 ];

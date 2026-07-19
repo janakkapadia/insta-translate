@@ -41,6 +41,9 @@ INSTA_TRANSLATE_DEFAULT_LANGUAGE=en
 # Add your API Keys
 INSTA_TRANSLATE_CLAUDE_KEY=your_anthropic_api_key_here
 INSTA_TRANSLATE_GEMINI_KEY=your_google_gemini_api_key_here
+
+# Number of times to retry failed API requests (defaults to 3)
+INSTA_TRANSLATE_RETRY_ATTEMPTS=3
 ```
 
 You can optionally publish the configuration file to customize the default model behavior:

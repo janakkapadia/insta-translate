@@ -207,7 +207,9 @@ class TranslationGenerateCommand extends Command
             return null;
         }
 
-        $response = Http::withHeaders([
+        $retryAttempts = (int) config('insta-translate.retry_attempts', 3);
+
+        $response = Http::retry($retryAttempts, 1000)->withHeaders([
             'x-api-key' => $apiKey,
             'anthropic-version' => '2023-06-01',
             'content-type' => 'application/json',
@@ -243,7 +245,9 @@ class TranslationGenerateCommand extends Command
             return null;
         }
 
-        $response = Http::withHeaders([
+        $retryAttempts = (int) config('insta-translate.retry_attempts', 3);
+
+        $response = Http::retry($retryAttempts, 1000)->withHeaders([
             'Content-Type' => 'application/json',
         ])->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}", [
             'contents' => [
