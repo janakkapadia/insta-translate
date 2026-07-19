@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace InstaRequest\InstaTranslate\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Symfony\Component\Finder\SplFileInfo;
+use Throwable;
 
 class TranslationGenerateCommand extends Command
 {
@@ -209,7 +213,19 @@ class TranslationGenerateCommand extends Command
 
         $retryAttempts = (int) config('insta-translate.retry_attempts', 3);
 
-        $response = Http::retry($retryAttempts, 1000)->withHeaders([
+        $response = Http::retry(
+            $retryAttempts,
+            1000,
+            function (Throwable $exception, PendingRequest $request) {
+                if ($exception instanceof ConnectionException) {
+                    return true;
+                }
+
+                $response = $exception instanceof RequestException ? $exception->response : null;
+
+                return $response && ($response->status() === 429 || $response->serverError());
+            },
+        )->withHeaders([
             'x-api-key' => $apiKey,
             'anthropic-version' => '2023-06-01',
             'content-type' => 'application/json',
@@ -247,7 +263,19 @@ class TranslationGenerateCommand extends Command
 
         $retryAttempts = (int) config('insta-translate.retry_attempts', 3);
 
-        $response = Http::retry($retryAttempts, 1000)->withHeaders([
+        $response = Http::retry(
+            $retryAttempts,
+            1000,
+            function (Throwable $exception, PendingRequest $request) {
+                if ($exception instanceof ConnectionException) {
+                    return true;
+                }
+
+                $response = $exception instanceof RequestException ? $exception->response : null;
+
+                return $response && ($response->status() === 429 || $response->serverError());
+            },
+        )->withHeaders([
             'Content-Type' => 'application/json',
         ])->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}", [
             'contents' => [
