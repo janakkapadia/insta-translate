@@ -17,6 +17,7 @@ class TranslationGenerateCommand extends Command
                             {--batch=50 : Number of keys to translate per API request}
                             {--model= : Which model to use (e.g. claude-3-opus-20240229, gemini-1.5-pro). Overrides env config.}
                             {--lang= : Specific language code to translate/create (e.g., fr, hi).}
+                            {--key=* : Specific keys to translate (can be used multiple times). Overrides the missing check.}
                             {--all : Translate all keys, overwriting existing translations.}';
 
     /**
@@ -50,6 +51,7 @@ class TranslationGenerateCommand extends Command
         $batchSize = (int) $this->option('batch');
         $model = $this->option('model') ?: config('ai-translator.default_model', 'claude');
         $translateAll = $this->option('all');
+        $specificKeys = $this->option('key');
 
         $langOption = $this->option('lang');
 
@@ -70,9 +72,20 @@ class TranslationGenerateCommand extends Command
             $existingTranslations = File::exists($localePath) ? json_decode(File::get($localePath), true) ?? [] : [];
             
             $missingKeys = [];
-            foreach ($baseTranslations as $key => $value) {
-                if ($translateAll || !isset($existingTranslations[$key])) {
-                    $missingKeys[$key] = $value;
+            
+            if (!empty($specificKeys)) {
+                foreach ($specificKeys as $key) {
+                    if (isset($baseTranslations[$key])) {
+                        $missingKeys[$key] = $baseTranslations[$key];
+                    } else {
+                        $this->warn("Key '{$key}' not found in {$defaultLang}.json. Skipping.");
+                    }
+                }
+            } else {
+                foreach ($baseTranslations as $key => $value) {
+                    if ($translateAll || !isset($existingTranslations[$key])) {
+                        $missingKeys[$key] = $value;
+                    }
                 }
             }
 
