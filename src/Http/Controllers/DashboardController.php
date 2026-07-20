@@ -60,6 +60,7 @@ class DashboardController extends Controller
 
         if ($mode === 'php') {
             $parts = explode('::', $key, 2);
+
             if (count($parts) === 2) {
                 $actualKey = $parts[1];
             }

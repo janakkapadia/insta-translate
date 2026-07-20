@@ -2,13 +2,14 @@
 
 use Illuminate\Support\Facades\Route;
 use InstaRequest\InstaTranslate\Http\Controllers\DashboardController;
+use InstaRequest\InstaTranslate\Http\Middleware\Authorize;
 
 Route::group([
     'domain' => config('insta-translate.domain', null),
     'prefix' => config('insta-translate.path', 'insta-translate'),
     'middleware' => array_merge(
         config('insta-translate.middleware', ['web']),
-        [\InstaRequest\InstaTranslate\Http\Middleware\Authorize::class]
+        [Authorize::class],
     ),
 ], function () {
     Route::get('/', [DashboardController::class, 'index'])->name('insta-translate.dashboard');
