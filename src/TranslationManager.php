@@ -152,14 +152,30 @@ class TranslationManager
      */
     public function callAi(string $prompt, string $model, string $provider): ?array
     {
-        try {
-            $agent = new AnonymousAgent('You are a helpful translation assistant.', [], []);
-            $response = $agent->prompt($prompt, [], $provider, $model);
+        $maxRetries = 3;
+        $attempt = 0;
+        
+        while ($attempt < $maxRetries) {
+            try {
+                $agent = new AnonymousAgent('You are a helpful translation assistant.', [], []);
+                $response = $agent->prompt($prompt, [], $provider, $model);
 
-            return $this->parseJsonResponse($response->text);
-        } catch (Throwable $e) {
-            throw new Exception(ucfirst($provider).' API Error: '.$e->getMessage());
+                return $this->parseJsonResponse($response->text);
+            } catch (Throwable $e) {
+                $attempt++;
+                
+                // If it's the last attempt or not a transient error, throw it.
+                // "overloaded" or "429" typically indicates a rate limit or temporary unavailability.
+                if ($attempt >= $maxRetries || !preg_match('/(overloaded|429|503|rate limit)/i', $e->getMessage())) {
+                    throw new Exception(ucfirst($provider).' API Error: '.$e->getMessage());
+                }
+                
+                // Exponential backoff: 2s, 4s, etc.
+                sleep(2 * $attempt);
+            }
         }
+        
+        return null;
     }
 
     /**
