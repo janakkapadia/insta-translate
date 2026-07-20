@@ -267,9 +267,17 @@
                                             <div class="p-3">
                                                 <textarea x-model="slideOverDrafts[locale]" rows="3" class="block w-full border-0 p-0 text-gray-900 placeholder-gray-500 focus:ring-0 sm:text-sm resize-y" placeholder="Translation missing..."></textarea>
                                             </div>
-                                            <div class="bg-gray-50 px-3 py-2 flex justify-end border-t">
-                                                <button @click="saveSlideOverTranslation(locale)" :disabled="slideOverSaving[locale]" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50">
-                                                    <svg x-show="slideOverSaving[locale]" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" x-cloak>
+                                            <div class="bg-gray-50 px-3 py-2 flex justify-end border-t space-x-2">
+                                                <button @click="regenerateSlideOverTranslation(locale)" :disabled="slideOverGenerating[locale] || slideOverSaving[locale]" class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50">
+                                                    <svg x-show="slideOverGenerating[locale]" class="animate-spin -ml-1 mr-1.5 h-4 w-4 text-gray-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" x-cloak>
+                                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                    <svg x-show="!slideOverGenerating[locale]" class="-ml-1 mr-1.5 h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                                    Regenerate
+                                                </button>
+                                                <button @click="saveSlideOverTranslation(locale)" :disabled="slideOverSaving[locale] || slideOverGenerating[locale]" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50">
+                                                    <svg x-show="slideOverSaving[locale]" class="animate-spin -ml-1 mr-1.5 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" x-cloak>
                                                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                                     </svg>
@@ -298,6 +306,7 @@
                 slideOverDrafts: {},
                 slideOverSaving: {},
                 slideOverSaved: {},
+                slideOverGenerating: {},
                 
                 allTranslationsList: {!! json_encode(collect($allTranslations)->map(function($data, $key) { $data['key'] = $key; return $data; })->values()) !!},
                 page: 1,
@@ -348,12 +357,14 @@
                     this.slideOverDrafts = {};
                     this.slideOverSaving = {};
                     this.slideOverSaved = {};
+                    this.slideOverGenerating = {};
                     
                     const locales = {!! json_encode($locales) !!};
                     locales.forEach(locale => {
                         this.slideOverDrafts[locale] = data.translations[locale] || '';
                         this.slideOverSaving[locale] = false;
                         this.slideOverSaved[locale] = false;
+                        this.slideOverGenerating[locale] = false;
                     });
                     
                     this.isSlideOverOpen = true;
@@ -400,6 +411,37 @@
                         alert('Network error while saving translation.');
                     } finally {
                         this.slideOverSaving[locale] = false;
+                    }
+                },
+                async regenerateSlideOverTranslation(locale) {
+                    this.slideOverGenerating[locale] = true;
+                    this.slideOverSaved[locale] = false;
+                    
+                    try {
+                        const response = await fetch('{{ route('insta-translate.api.generate') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                key: this.selectedKey,
+                                base_value: this.selectedData.base_value,
+                                target_locale: locale
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        if (data.success) {
+                            this.slideOverDrafts[locale] = data.translation;
+                        } else {
+                            alert('Error generating translation: ' + (data.error || 'Unknown error'));
+                        }
+                    } catch (e) {
+                        alert('Network error while generating translation.');
+                    } finally {
+                        this.slideOverGenerating[locale] = false;
                     }
                 }
             }
