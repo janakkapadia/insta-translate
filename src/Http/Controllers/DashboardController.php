@@ -43,11 +43,13 @@ class DashboardController extends Controller
             'key' => 'required|string',
             'base_value' => 'required|string',
             'target_locale' => 'required|string',
+            'context' => 'nullable|string',
         ]);
 
         $key = $request->input('key');
         $baseValue = $request->input('base_value');
         $targetLocale = $request->input('target_locale');
+        $context = $request->input('context');
 
         $defaultLang = config('insta-translate.default_language', 'en');
         $model = config('insta-translate.default_model', 'claude');
@@ -58,7 +60,6 @@ class DashboardController extends Controller
 
         if ($mode === 'php') {
             $parts = explode('::', $key, 2);
-
             if (count($parts) === 2) {
                 $actualKey = $parts[1];
             }
@@ -67,7 +68,7 @@ class DashboardController extends Controller
         $chunk = [$actualKey => $baseValue];
 
         try {
-            $translatedChunk = $manager->translateChunk($chunk, $targetLocale, $model, $defaultLang, false);
+            $translatedChunk = $manager->translateChunk($chunk, $targetLocale, $model, $defaultLang, false, $context);
 
             if ($translatedChunk) {
                 $translatedChunk = $manager->applyGlossaryOverrides($translatedChunk, $targetLocale);

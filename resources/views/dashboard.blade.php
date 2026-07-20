@@ -251,7 +251,10 @@
                             <div class="relative flex-1 px-4 py-6 sm:px-6">
                                 <div class="mb-6 pb-6 border-b border-gray-200">
                                     <h3 class="text-sm font-medium text-gray-900 mb-2">Base Value ({{ $defaultLang }})</h3>
-                                    <div class="bg-gray-50 rounded-md p-3 text-sm text-gray-700 whitespace-pre-wrap border border-gray-200" x-text="selectedData?.base_value"></div>
+                                    <div class="bg-gray-50 rounded-md p-3 text-sm text-gray-700 whitespace-pre-wrap border border-gray-200 mb-4" x-text="selectedData?.base_value"></div>
+                                    
+                                    <label for="translation_context" class="block text-sm font-medium text-gray-700 mb-1">Optional Context (helps AI translate better)</label>
+                                    <input type="text" id="translation_context" x-model="translationContext" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" placeholder="e.g. 'Button label on checkout page' or 'SaaS billing dashboard'">
                                 </div>
                                 
                                 <div class="space-y-6">
@@ -313,9 +316,13 @@
             return {
                 tab: 'missing',
                 searchQuery: '',
+                page: 1,
+                perPage: 50,
+                
                 isSlideOverOpen: false,
-                selectedKey: null,
+                selectedKey: '',
                 selectedData: null,
+                translationContext: '',
                 slideOverDrafts: {},
                 slideOverSaving: {},
                 slideOverSaved: {},
@@ -323,25 +330,32 @@
                 slideOverGeneratedDrafts: {},
                 
                 allTranslationsList: {!! json_encode(collect($allTranslations)->map(function($data, $key) { $data['key'] = $key; return $data; })->values()) !!},
-                page: 1,
-                perPage: 50,
                 
                 get filteredList() {
-                    if (this.searchQuery === '') return this.allTranslationsList;
-                    const query = this.searchQuery.toLowerCase();
+                    if (this.searchQuery === '') {
+                        return this.allTranslationsList;
+                    }
+                    const q = this.searchQuery.toLowerCase();
                     return this.allTranslationsList.filter(item => {
-                        return item.key.toLowerCase().includes(query) || 
-                               (item.base_value && item.base_value.toLowerCase().includes(query));
+                        if (item.key.toLowerCase().includes(q)) return true;
+                        if (item.base_value && item.base_value.toLowerCase().includes(q)) return true;
+                        
+                        for (const locale in item.translations) {
+                            if (item.translations[locale] && item.translations[locale].toLowerCase().includes(q)) return true;
+                        }
+                        
+                        return false;
                     });
                 },
                 
                 get paginatedList() {
                     const start = (this.page - 1) * this.perPage;
-                    return this.filteredList.slice(start, start + this.perPage);
+                    const end = start + this.perPage;
+                    return this.filteredList.slice(start, end);
                 },
                 
                 get totalPages() {
-                    return Math.ceil(this.filteredList.length / this.perPage);
+                    return Math.max(1, Math.ceil(this.filteredList.length / this.perPage));
                 },
                 
                 nextPage() {
@@ -367,6 +381,7 @@
                 openSlideOver(key, data) {
                     this.selectedKey = key;
                     this.selectedData = data;
+                    this.translationContext = '';
                     
                     this.slideOverDrafts = {};
                     this.slideOverSaving = {};
@@ -388,8 +403,14 @@
                 closeSlideOver() {
                     this.isSlideOverOpen = false;
                     setTimeout(() => {
-                        this.selectedKey = null;
+                        this.selectedKey = '';
                         this.selectedData = null;
+                        this.translationContext = '';
+                        this.slideOverDrafts = {};
+                        this.slideOverSaved = {};
+                        this.slideOverSaving = {};
+                        this.slideOverGenerating = {};
+                        this.slideOverGeneratedDrafts = {};
                     }, 300);
                 },
                 async saveSlideOverTranslation(locale) {
@@ -445,7 +466,8 @@
                             body: JSON.stringify({
                                 key: this.selectedKey,
                                 base_value: this.selectedData.base_value,
-                                target_locale: locale
+                                target_locale: locale,
+                                context: this.translationContext
                             })
                         });
                         
