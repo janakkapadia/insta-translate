@@ -266,6 +266,19 @@
                                             </div>
                                             <div class="p-3">
                                                 <textarea x-model="slideOverDrafts[locale]" rows="3" class="block w-full border-0 p-0 text-gray-900 placeholder-gray-500 focus:ring-0 sm:text-sm resize-y" placeholder="Translation missing..."></textarea>
+                                                
+                                                <div x-show="slideOverGeneratedDrafts[locale] !== null" class="mt-3 bg-indigo-50 border border-indigo-100 rounded-md p-3" x-cloak>
+                                                    <h4 class="text-xs font-medium text-indigo-800 mb-1">AI Suggestion:</h4>
+                                                    <p class="text-sm text-indigo-900 whitespace-pre-wrap mb-3" x-text="slideOverGeneratedDrafts[locale]"></p>
+                                                    <div class="flex space-x-2">
+                                                        <button @click="slideOverDrafts[locale] = slideOverGeneratedDrafts[locale]; slideOverGeneratedDrafts[locale] = null" class="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                                            Accept & Update
+                                                        </button>
+                                                        <button @click="slideOverGeneratedDrafts[locale] = null" class="inline-flex items-center px-2 py-1 border border-gray-300 text-xs font-medium rounded shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                                            Discard
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </div>
                                             <div class="bg-gray-50 px-3 py-2 flex justify-end border-t space-x-2">
                                                 <button @click="regenerateSlideOverTranslation(locale)" :disabled="slideOverGenerating[locale] || slideOverSaving[locale]" class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50">
@@ -307,6 +320,7 @@
                 slideOverSaving: {},
                 slideOverSaved: {},
                 slideOverGenerating: {},
+                slideOverGeneratedDrafts: {},
                 
                 allTranslationsList: {!! json_encode(collect($allTranslations)->map(function($data, $key) { $data['key'] = $key; return $data; })->values()) !!},
                 page: 1,
@@ -358,6 +372,7 @@
                     this.slideOverSaving = {};
                     this.slideOverSaved = {};
                     this.slideOverGenerating = {};
+                    this.slideOverGeneratedDrafts = {};
                     
                     const locales = {!! json_encode($locales) !!};
                     locales.forEach(locale => {
@@ -365,6 +380,7 @@
                         this.slideOverSaving[locale] = false;
                         this.slideOverSaved[locale] = false;
                         this.slideOverGenerating[locale] = false;
+                        this.slideOverGeneratedDrafts[locale] = null;
                     });
                     
                     this.isSlideOverOpen = true;
@@ -416,6 +432,7 @@
                 async regenerateSlideOverTranslation(locale) {
                     this.slideOverGenerating[locale] = true;
                     this.slideOverSaved[locale] = false;
+                    this.slideOverGeneratedDrafts[locale] = null;
                     
                     try {
                         const response = await fetch('{{ route('insta-translate.api.generate') }}', {
@@ -444,9 +461,7 @@
                         }
                         
                         if (data.success) {
-                            if (confirm('Generated translation:\n\n' + data.translation + '\n\nDo you want to update this value?')) {
-                                this.slideOverDrafts[locale] = data.translation;
-                            }
+                            this.slideOverGeneratedDrafts[locale] = data.translation;
                         } else {
                             alert('Error generating translation: ' + (data.error || 'Unknown error'));
                         }
