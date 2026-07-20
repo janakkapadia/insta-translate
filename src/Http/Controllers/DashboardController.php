@@ -22,14 +22,18 @@ class DashboardController extends Controller
         $mode = config('insta-translate.mode', 'json');
 
         $missingTranslations = $manager->getMissingTranslationsSummary($langDir, $defaultLang, $mode);
+        $allTranslations = $manager->getAllTranslationsSummary($langDir, $defaultLang, $mode);
+        $locales = $mode === 'php' ? $manager->getPhpLocales($langDir, $defaultLang) : $manager->getJsonLocales($langDir, $defaultLang);
 
         /** @var view-string $view */
         $view = 'insta-translate::dashboard';
 
         return view($view, [
             'missingTranslations' => $missingTranslations,
+            'allTranslations' => $allTranslations,
             'defaultLang' => $defaultLang,
             'mode' => $mode,
+            'locales' => $locales,
         ]);
     }
 

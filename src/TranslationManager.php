@@ -330,4 +330,113 @@ class TranslationManager
 
         return $summary;
     }
+    /**
+     * Get summary of all translations for the dashboard.
+     *
+     * @return array<string, array{base_value: string, translations: array<string, string>, missing_in: list<string>}>
+     */
+    public function getAllTranslationsSummary(string $langDir, string $defaultLang, string $mode = 'json'): array
+    {
+        /** @var array<string, array{base_value: string, translations: array<string, string>, missing_in: list<string>}> $summary */
+        $summary = [];
+
+        if ($mode === 'php') {
+            $baseDir = $langDir.'/'.$defaultLang;
+
+            if (! File::isDirectory($baseDir)) {
+                return [];
+            }
+
+            $handler = new PhpArrayFileHandler;
+            $locales = $this->getPhpLocales($langDir, $defaultLang);
+
+            /** @var list<SplFileInfo> $baseFiles */
+            $baseFiles = File::files($baseDir);
+
+            foreach ($baseFiles as $baseFile) {
+                if ($baseFile->getExtension() !== 'php') {
+                    continue;
+                }
+
+                $filename = $baseFile->getFilename();
+                $baseTranslations = $handler->read($baseFile->getPathname());
+                $baseFlat = $handler->flattenWithDot($baseTranslations);
+
+                // Initialize all base keys
+                foreach ($baseFlat as $key => $value) {
+                    $fullKey = $filename.'::'.$key;
+                    $summary[$fullKey] = [
+                        'base_value' => (string) $value,
+                        'translations' => [],
+                        'missing_in' => [],
+                    ];
+                }
+
+                foreach ($locales as $locale) {
+                    $targetPath = $langDir.'/'.$locale.'/'.$filename;
+                    $existingFlat = File::exists($targetPath)
+                        ? $handler->flattenWithDot($handler->read($targetPath))
+                        : [];
+
+                    foreach ($baseFlat as $key => $value) {
+                        $fullKey = $filename.'::'.$key;
+                        
+                        /** @var array{base_value: string, translations: array<string, string>, missing_in: list<string>} $data */
+                        $data = $summary[$fullKey];
+                        
+                        if (isset($existingFlat[$key])) {
+                            $data['translations'][$locale] = (string) $existingFlat[$key];
+                        } else {
+                            $data['missing_in'][] = $locale;
+                        }
+                        
+                        $summary[$fullKey] = $data;
+                    }
+                }
+            }
+        } else {
+            $baseLangFile = $langDir.'/'.$defaultLang.'.json';
+
+            if (! File::exists($baseLangFile)) {
+                return [];
+            }
+
+            $baseTranslations = json_decode(File::get($baseLangFile), true) ?? [];
+
+            if (! is_array($baseTranslations)) {
+                return [];
+            }
+
+            $locales = $this->getJsonLocales($langDir, $defaultLang);
+
+            // Initialize all base keys
+            foreach ($baseTranslations as $key => $value) {
+                $summary[$key] = [
+                    'base_value' => (string) $value,
+                    'translations' => [],
+                    'missing_in' => [],
+                ];
+            }
+
+            foreach ($locales as $locale) {
+                $localePath = $langDir.'/'.$locale.'.json';
+                $existingTranslations = File::exists($localePath) ? json_decode(File::get($localePath), true) ?? [] : [];
+
+                foreach ($baseTranslations as $key => $value) {
+                    /** @var array{base_value: string, translations: array<string, string>, missing_in: list<string>} $data */
+                    $data = $summary[$key];
+                    
+                    if (isset($existingTranslations[$key])) {
+                        $data['translations'][$locale] = (string) $existingTranslations[$key];
+                    } else {
+                        $data['missing_in'][] = $locale;
+                    }
+                    
+                    $summary[$key] = $data;
+                }
+            }
+        }
+
+        return $summary;
+    }
 }
