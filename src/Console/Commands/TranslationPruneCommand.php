@@ -7,6 +7,7 @@ namespace InstaRequest\InstaTranslate\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use InstaRequest\InstaTranslate\Support\PhpArrayFileHandler;
+use InstaRequest\InstaTranslate\TranslationManager;
 use Symfony\Component\Finder\SplFileInfo;
 
 class TranslationPruneCommand extends Command
@@ -27,7 +28,7 @@ class TranslationPruneCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle(): int
+    public function handle(TranslationManager $manager): int
     {
         $defaultLang = config('insta-translate.default_language', 'en');
         $langDir = rtrim(config('insta-translate.lang_path', base_path('lang')), '/');
@@ -36,13 +37,13 @@ class TranslationPruneCommand extends Command
         $langOption = is_string($this->option('lang')) ? $this->option('lang') : null;
 
         if ($phpMode) {
-            return $this->prunePhpFiles($langDir, $defaultLang, $langOption, $dryRun);
+            return $this->prunePhpFiles($manager, $langDir, $defaultLang, $langOption, $dryRun);
         }
 
-        return $this->pruneJsonFiles($langDir, $defaultLang, $langOption, $dryRun);
+        return $this->pruneJsonFiles($manager, $langDir, $defaultLang, $langOption, $dryRun);
     }
 
-    private function pruneJsonFiles(string $langDir, string $defaultLang, ?string $langOption, bool $dryRun): int
+    private function pruneJsonFiles(TranslationManager $manager, string $langDir, string $defaultLang, ?string $langOption, bool $dryRun): int
     {
         $baseLangFile = $langDir.'/'.$defaultLang.'.json';
 
@@ -55,19 +56,16 @@ class TranslationPruneCommand extends Command
         $baseKeys = array_keys(json_decode(File::get($baseLangFile), true) ?? []);
 
         if ($langOption) {
-            $localeFile = str_ends_with($langOption, '.json') ? $langOption : $langOption.'.json';
-            $locales = collect([$localeFile]);
+            $targetLocales = [$langOption];
         } else {
-            $locales = collect(File::files($langDir))
-                ->map(fn (SplFileInfo $file) => $file->getFilename())
-                ->filter(fn (string $file) => str_ends_with($file, '.json') && $file !== $defaultLang.'.json' && ! str_starts_with($file, 'php_'));
+            $targetLocales = $manager->getJsonLocales($langDir, $defaultLang);
         }
 
         $totalPruned = 0;
 
-        foreach ($locales as $localeFile) {
+        foreach ($targetLocales as $targetLocale) {
+            $localeFile = $targetLocale.'.json';
             $localePath = $langDir.'/'.$localeFile;
-            $targetLocale = str_replace('.json', '', $localeFile);
 
             if (! File::exists($localePath)) {
                 $this->warn("Skipping {$targetLocale}: file does not exist.");
@@ -115,7 +113,7 @@ class TranslationPruneCommand extends Command
         return self::SUCCESS;
     }
 
-    private function prunePhpFiles(string $langDir, string $defaultLang, ?string $langOption, bool $dryRun): int
+    private function prunePhpFiles(TranslationManager $manager, string $langDir, string $defaultLang, ?string $langOption, bool $dryRun): int
     {
         $baseDir = $langDir.'/'.$defaultLang;
 
@@ -133,11 +131,7 @@ class TranslationPruneCommand extends Command
         if ($langOption) {
             $targetLocales = [$langOption];
         } else {
-            $targetLocales = collect(File::directories($langDir))
-                ->map(fn (string $dir) => basename($dir))
-                ->filter(fn (string $dir) => $dir !== $defaultLang)
-                ->values()
-                ->all();
+            $targetLocales = $manager->getPhpLocales($langDir, $defaultLang);
         }
 
         $totalPruned = 0;

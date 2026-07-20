@@ -23,17 +23,31 @@ class InstaTranslateServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if (! $this->app->runningInConsole()) {
-            return;
+        if ($this->app->runningInConsole()) {
+            $this->publishes([
+                __DIR__.'/../config/insta-translate.php' => config_path('insta-translate.php'),
+            ], ['insta-translate', 'insta-translate-config']);
+
+            $this->publishes([
+                __DIR__.'/../resources/views' => resource_path('views/vendor/insta-translate'),
+            ], 'insta-translate-views');
+
+            $this->commands([
+                TranslationGenerateCommand::class,
+                TranslationPruneCommand::class,
+            ]);
         }
 
-        $this->publishes([
-            __DIR__.'/../config/insta-translate.php' => config_path('insta-translate.php'),
-        ], ['insta-translate', 'insta-translate-config']);
+        $this->loadViewsFrom(__DIR__.'/../resources/views', 'insta-translate');
 
-        $this->commands([
-            TranslationGenerateCommand::class,
-            TranslationPruneCommand::class,
-        ]);
+        $this->registerRoutes();
+    }
+
+    /**
+     * Register the package routes.
+     */
+    protected function registerRoutes(): void
+    {
+        $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
     }
 }
