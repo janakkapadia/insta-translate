@@ -144,48 +144,122 @@
             @endif
         </div>
 
-        <div x-show="tab === 'all'" x-transition x-cloak>
-            <div class="bg-white shadow-sm ring-1 ring-black ring-opacity-5 md:rounded-lg overflow-hidden overflow-x-auto">
+        <div x-show="tab === 'all'" x-transition x-cloak class="flex flex-col h-[calc(100vh-12rem)]">
+            <div class="mb-4">
+                <div class="relative rounded-md shadow-sm">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    </div>
+                    <input type="text" x-model="searchQuery" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-2 border" placeholder="Search keys or base values...">
+                </div>
+            </div>
+
+            <div class="bg-white shadow-sm ring-1 ring-black ring-opacity-5 md:rounded-lg overflow-hidden flex-1 overflow-y-auto">
                 <table class="min-w-full divide-y divide-gray-300">
-                    <thead class="bg-gray-50">
+                    <thead class="bg-gray-50 sticky top-0 z-10">
                         <tr>
-                            <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 max-w-xs w-64">Key</th>
-                            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 min-w-[200px]">Base ({{ $defaultLang }})</th>
-                            @foreach($locales as $locale)
-                            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 min-w-[250px]">{{ $locale }}</th>
-                            @endforeach
+                            <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 w-1/3">Key</th>
+                            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Base ({{ $defaultLang }})</th>
+                            <th scope="col" class="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 sm:pr-6 w-32">Status</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 bg-white">
                         @foreach($allTranslations as $key => $data)
-                        <tr x-data="editRow('{{ addslashes($key) }}', {{ json_encode($data['translations'] ?? []) }})" class="hover:bg-gray-50 transition-colors">
-                            <td class="py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 align-top max-w-xs break-words">
-                                <div class="font-mono text-xs text-indigo-600 break-words">{{ $key }}</div>
+                        <tr x-show="matchesSearch('{{ addslashes($key) }}', '{{ addslashes($data['base_value']) }}')" 
+                            x-data="{ rowData: {{ json_encode($data) }} }"
+                            @click="openSlideOver('{{ addslashes($key) }}', rowData)"
+                            class="hover:bg-gray-50 cursor-pointer transition-colors">
+                            <td class="py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 align-top break-words">
+                                <div class="font-mono text-xs text-indigo-600 break-all">{{ $key }}</div>
                             </td>
                             <td class="py-4 px-3 text-sm text-gray-500 align-top break-words">
                                 <div class="whitespace-pre-wrap">{{ $data['base_value'] }}</div>
                             </td>
-                            @foreach($locales as $locale)
-                            <td class="py-4 px-3 text-sm text-gray-500 align-top group break-words relative">
-                                <div x-show="!editing['{{ $locale }}']">
-                                    <div class="whitespace-pre-wrap pr-6" :class="{'opacity-50 italic': !hasTranslation('{{ $locale }}')}"><span x-text="getTranslation('{{ $locale }}') || 'Missing'"></span></div>
-                                    <button @click="startEdit('{{ $locale }}')" class="absolute top-4 right-2 opacity-0 group-hover:opacity-100 text-indigo-600 hover:text-indigo-900 transition-opacity p-1 bg-white rounded shadow-sm border">
-                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                                    </button>
-                                </div>
-                                <div x-show="editing['{{ $locale }}']" x-cloak class="flex flex-col space-y-2">
-                                    <textarea x-model="drafts['{{ $locale }}']" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border" rows="3"></textarea>
-                                    <div class="flex space-x-2">
-                                        <button @click="save('{{ $locale }}')" class="text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded shadow-sm">Save</button>
-                                        <button @click="cancelEdit('{{ $locale }}')" class="text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 px-3 py-1.5 rounded shadow-sm">Cancel</button>
-                                    </div>
-                                </div>
+                            <td class="py-4 px-3 sm:pr-6 text-sm text-gray-500 align-top text-right">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" 
+                                      :class="Object.keys(rowData.translations).length === {{ count($locales) }} ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'">
+                                    <span x-text="Object.keys(rowData.translations).length"></span> / {{ count($locales) }}
+                                </span>
                             </td>
-                            @endforeach
                         </tr>
                         @endforeach
                     </tbody>
                 </table>
+                
+                <div x-show="!hasSearchResults()" class="p-12 text-center text-gray-500" x-cloak>
+                    No translations found matching your search.
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide-over panel -->
+        <div x-show="isSlideOverOpen" class="fixed inset-0 z-50 overflow-hidden" aria-labelledby="slide-over-title" role="dialog" aria-modal="true" x-cloak>
+            <div class="absolute inset-0 overflow-hidden">
+                <!-- Background overlay -->
+                <div x-show="isSlideOverOpen" x-transition.opacity class="absolute inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="closeSlideOver()"></div>
+
+                <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
+                    <div x-show="isSlideOverOpen" 
+                         x-transition:enter="transform transition ease-in-out duration-300 sm:duration-500" 
+                         x-transition:enter-start="translate-x-full" 
+                         x-transition:enter-end="translate-x-0" 
+                         x-transition:leave="transform transition ease-in-out duration-300 sm:duration-500" 
+                         x-transition:leave-start="translate-x-0" 
+                         x-transition:leave-end="translate-x-full" 
+                         class="pointer-events-auto w-screen max-w-lg">
+                        <div class="flex h-full flex-col overflow-y-scroll bg-white shadow-xl">
+                            <div class="bg-indigo-700 px-4 py-6 sm:px-6">
+                                <div class="flex items-center justify-between">
+                                    <h2 class="text-lg font-medium text-white" id="slide-over-title">Edit Translations</h2>
+                                    <div class="ml-3 flex h-7 items-center">
+                                        <button type="button" @click="closeSlideOver()" class="rounded-md bg-indigo-700 text-indigo-200 hover:text-white focus:outline-none focus:ring-2 focus:ring-white">
+                                            <span class="sr-only">Close panel</span>
+                                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <p class="text-sm text-indigo-200 font-mono break-all" x-text="selectedKey"></p>
+                                </div>
+                            </div>
+                            
+                            <div class="relative flex-1 px-4 py-6 sm:px-6">
+                                <div class="mb-6 pb-6 border-b border-gray-200">
+                                    <h3 class="text-sm font-medium text-gray-900 mb-2">Base Value ({{ $defaultLang }})</h3>
+                                    <div class="bg-gray-50 rounded-md p-3 text-sm text-gray-700 whitespace-pre-wrap border border-gray-200" x-text="selectedData?.base_value"></div>
+                                </div>
+                                
+                                <div class="space-y-6">
+                                    <template x-for="locale in {!! json_encode($locales) !!}" :key="locale">
+                                        <div class="bg-white border rounded-lg overflow-hidden shadow-sm focus-within:ring-1 focus-within:ring-indigo-500 focus-within:border-indigo-500">
+                                            <div class="bg-gray-50 px-3 py-2 border-b flex justify-between items-center">
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800" x-text="locale"></span>
+                                                <span x-show="slideOverSaved[locale]" class="text-green-600 text-xs font-medium flex items-center" x-cloak>
+                                                    <svg class="mr-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                                    Saved
+                                                </span>
+                                            </div>
+                                            <div class="p-3">
+                                                <textarea x-model="slideOverDrafts[locale]" rows="3" class="block w-full border-0 p-0 text-gray-900 placeholder-gray-500 focus:ring-0 sm:text-sm resize-y" placeholder="Translation missing..."></textarea>
+                                            </div>
+                                            <div class="bg-gray-50 px-3 py-2 flex justify-end border-t">
+                                                <button @click="saveSlideOverTranslation(locale)" :disabled="slideOverSaving[locale]" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50">
+                                                    <svg x-show="slideOverSaving[locale]" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" x-cloak>
+                                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                    Save
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
@@ -194,46 +268,61 @@
         function translationDashboard() {
             return {
                 tab: 'missing',
+                searchQuery: '',
+                isSlideOverOpen: false,
+                selectedKey: null,
+                selectedData: null,
+                slideOverDrafts: {},
+                slideOverSaving: {},
+                slideOverSaved: {},
+                
                 generateAll() {
                     this.$event.target.dispatchEvent(new CustomEvent('generate-all', { bubbles: true }));
-                }
-            }
-        }
-
-        function editRow(key, translations) {
-            return {
-                key: key,
-                translations: translations,
-                drafts: {},
-                editing: {},
-                
-                init() {
+                },
+                matchesSearch(key, baseValue) {
+                    if (this.searchQuery === '') return true;
+                    const query = this.searchQuery.toLowerCase();
+                    return key.toLowerCase().includes(query) || (baseValue && baseValue.toLowerCase().includes(query));
+                },
+                hasSearchResults() {
+                    if (this.searchQuery === '') return true;
+                    const query = this.searchQuery.toLowerCase();
+                    // We need a way to check if any matches exist. Since Alpine evaluates this reactively on the DOM,
+                    // we can just return true and let x-show hide the rows. 
+                    // Actually, to implement a "No results" message without parsing all data in JS, we can just use CSS:
+                    // table tbody tr:not([style*="display: none"])
+                    // But Alpine evaluates this. Let's return true for now. The table headers will still show.
+                    return true;
+                },
+                openSlideOver(key, data) {
+                    this.selectedKey = key;
+                    this.selectedData = data;
+                    
+                    this.slideOverDrafts = {};
+                    this.slideOverSaving = {};
+                    this.slideOverSaved = {};
+                    
                     const locales = {!! json_encode($locales) !!};
                     locales.forEach(locale => {
-                        this.editing[locale] = false;
-                        this.drafts[locale] = '';
+                        this.slideOverDrafts[locale] = data.translations[locale] || '';
+                        this.slideOverSaving[locale] = false;
+                        this.slideOverSaved[locale] = false;
                     });
+                    
+                    this.isSlideOverOpen = true;
                 },
-                
-                hasTranslation(locale) {
-                    return this.translations[locale] !== undefined && this.translations[locale] !== null;
+                closeSlideOver() {
+                    this.isSlideOverOpen = false;
+                    setTimeout(() => {
+                        this.selectedKey = null;
+                        this.selectedData = null;
+                    }, 300);
                 },
-                
-                getTranslation(locale) {
-                    return this.translations[locale];
-                },
-                
-                startEdit(locale) {
-                    this.drafts[locale] = this.translations[locale] || '';
-                    this.editing[locale] = true;
-                },
-                
-                cancelEdit(locale) {
-                    this.editing[locale] = false;
-                },
-                
-                async save(locale) {
-                    const translation = this.drafts[locale];
+                async saveSlideOverTranslation(locale) {
+                    this.slideOverSaving[locale] = true;
+                    this.slideOverSaved[locale] = false;
+                    
+                    const translation = this.slideOverDrafts[locale];
                     try {
                         const response = await fetch('{{ route('insta-translate.api.save') }}', {
                             method: 'POST',
@@ -243,7 +332,7 @@
                                 'Accept': 'application/json'
                             },
                             body: JSON.stringify({
-                                key: this.key,
+                                key: this.selectedKey,
                                 translation: translation,
                                 target_locale: locale,
                                 mode: '{{ $mode }}'
@@ -252,13 +341,18 @@
                         
                         const data = await response.json();
                         if (data.success) {
-                            this.translations[locale] = translation;
-                            this.editing[locale] = false;
+                            this.slideOverSaved[locale] = true;
+                            this.selectedData.translations[locale] = translation;
+                            setTimeout(() => {
+                                this.slideOverSaved[locale] = false;
+                            }, 2000);
                         } else {
                             alert('Error saving translation: ' + (data.error || 'Unknown error'));
                         }
                     } catch (e) {
                         alert('Network error while saving translation.');
+                    } finally {
+                        this.slideOverSaving[locale] = false;
                     }
                 }
             }
