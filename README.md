@@ -147,6 +147,27 @@ Then in `config/insta-translate.php`:
 'middleware' => env('INSTA_TRANSLATE_MIDDLEWARE', ['web']),
 ```
 
+### Authorization
+
+By default, you will only be able to access the dashboard in the `local` environment. To restrict or allow access in other environments, you can define an authorization callback in your `App\Providers\AppServiceProvider`.
+
+Use the `InstaTranslate::auth` method to define logic that determines whether the current request is allowed to access the dashboard:
+
+```php
+use InstaRequest\InstaTranslate\InstaTranslate;
+
+public function boot(): void
+{
+    InstaTranslate::auth(function ($request) {
+        // Return true to allow access, false to deny (403)
+        return app()->environment('local') ||
+               in_array($request->user()?->email, [
+                   'admin@example.com',
+               ]);
+    });
+}
+```
+
 ## How It Works
 
 1. The command or dashboard reads the base language file (e.g., `en.json` or `en/*.php`).
