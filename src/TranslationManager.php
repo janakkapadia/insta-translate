@@ -221,6 +221,10 @@ class TranslationManager
      */
     public function getJsonLocales(string $langDir, string $defaultLang): array
     {
+        if (! File::isDirectory($langDir)) {
+            return [];
+        }
+
         return collect(File::files($langDir))
             ->map(fn (SplFileInfo $file) => $file->getFilename())
             ->filter(fn (string $file) => str_ends_with($file, '.json') && $file !== $defaultLang.'.json' && ! str_starts_with($file, 'php_'))
@@ -236,6 +240,10 @@ class TranslationManager
      */
     public function getPhpLocales(string $langDir, string $defaultLang): array
     {
+        if (! File::isDirectory($langDir)) {
+            return [];
+        }
+
         return collect(File::directories($langDir))
             ->map(fn (string $dir) => basename($dir))
             ->filter(fn (string $dir) => $dir !== $defaultLang)
