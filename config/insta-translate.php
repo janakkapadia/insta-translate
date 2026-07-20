@@ -53,6 +53,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | InstaTranslate Dashboard Route Domain
+    |--------------------------------------------------------------------------
+    |
+    | This is the subdomain where the InstaTranslate dashboard will be accessible from.
+    | If null, the dashboard will be available on all domains or the default app domain.
+    |
+    */
+    'domain' => env('INSTA_TRANSLATE_DOMAIN', null),
+
+    /*
+    |--------------------------------------------------------------------------
     | InstaTranslate Dashboard Route Path
     |--------------------------------------------------------------------------
     |

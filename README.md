@@ -117,9 +117,39 @@ The glossary path defaults to `lang/glossary.json` and can be overridden via:
 INSTA_TRANSLATE_GLOSSARY_PATH=./lang/glossary.json
 ```
 
+## Dashboard Web UI
+
+InstaTranslate includes a beautiful, interactive web dashboard where you can visually inspect missing translations, run AI translations in the browser, and review them before saving.
+
+1. Ensure the package service provider is registered (this is automatic in Laravel 11+).
+2. Visit `/insta-translate` in your browser (e.g. `https://your-app.test/insta-translate`).
+
+If you have custom domains configured in your application (like a wildcard `Route::domain()` catch-all), you may need to explicitly configure the dashboard's domain in your environment or published config file:
+
+```env
+# In your .env file
+INSTA_TRANSLATE_DOMAIN=your-app.test
+```
+
+### Dashboard Configuration Options
+
+You can customize the dashboard route and domain by publishing the config file:
+
+```bash
+php artisan vendor:publish --tag="insta-translate-config"
+```
+
+Then in `config/insta-translate.php`:
+
+```php
+'domain' => env('INSTA_TRANSLATE_DOMAIN', null),
+'path' => env('INSTA_TRANSLATE_PATH', 'insta-translate'),
+'middleware' => env('INSTA_TRANSLATE_MIDDLEWARE', ['web']),
+```
+
 ## How It Works
 
-1. The command reads the base language file (e.g., `en.json` or `en/*.php`).
+1. The command or dashboard reads the base language file (e.g., `en.json` or `en/*.php`).
 2. It iterates over all target locale files.
 3. For each locale, it identifies keys that exist in the base file but are missing in the target (unless `--all` is passed).
 4. Glossary terms and context are injected into the AI prompt.

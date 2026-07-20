@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use InstaRequest\InstaTranslate\Http\Controllers\DashboardController;
 
 Route::group([
+    'domain' => config('insta-translate.domain', null),
     'prefix' => config('insta-translate.path', 'insta-translate'),
     'middleware' => config('insta-translate.middleware', ['web']),
 ], function () {
