@@ -131,6 +131,13 @@ If you have custom domains configured in your application (like a wildcard `Rout
 INSTA_TRANSLATE_DOMAIN=your-app.test
 ```
 
+### Context-Aware UI Translation
+
+When regenerating a specific translation key from the dashboard's slide-over panel, you have two powerful ways to ensure the AI translates the key accurately:
+
+1. **Automatic Code Context**: If you leave the context field blank, InstaTranslate will automatically scan your `resources/views`, `app`, `routes`, and `resources/js` directories to find exactly where that key is used in your codebase. It grabs the surrounding lines of code and injects them into the AI prompt so the AI can physically "see" how the text is used (e.g. as a button label, a validation error, etc.).
+2. **Manual Context**: You can provide a manual context hint (e.g. "Lead as in a sales lead, not the metal") in the **Optional Context** text box. This manual hint will override the automatic code context.
+
 ### Dashboard Configuration Options
 
 You can customize the dashboard route and domain by publishing the config file:
