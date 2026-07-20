@@ -195,15 +195,18 @@ class TranslationGenerateCommand extends Command
         return $model;
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
     private function callAi(string $prompt, string $model, string $provider): ?array
     {
         try {
             $agent = new AnonymousAgent('You are a helpful translation assistant.', [], []);
             $response = $agent->prompt($prompt, [], $provider, $model);
-            
+
             return $this->parseJsonResponse($response->text);
         } catch (Throwable $e) {
-            $this->error(ucfirst($provider) . ' API Error: ' . $e->getMessage());
+            $this->error(ucfirst($provider).' API Error: '.$e->getMessage());
 
             return null;
         }
