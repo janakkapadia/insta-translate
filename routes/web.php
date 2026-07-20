@@ -6,7 +6,10 @@ use InstaRequest\InstaTranslate\Http\Controllers\DashboardController;
 Route::group([
     'domain' => config('insta-translate.domain', null),
     'prefix' => config('insta-translate.path', 'insta-translate'),
-    'middleware' => config('insta-translate.middleware', ['web']),
+    'middleware' => array_merge(
+        config('insta-translate.middleware', ['web']),
+        [\InstaRequest\InstaTranslate\Http\Middleware\Authorize::class]
+    ),
 ], function () {
     Route::get('/', [DashboardController::class, 'index'])->name('insta-translate.dashboard');
     Route::post('/api/generate', [DashboardController::class, 'generate'])->name('insta-translate.api.generate');
