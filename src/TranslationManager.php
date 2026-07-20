@@ -8,6 +8,7 @@ use Exception;
 use Illuminate\Support\Facades\File;
 use InstaRequest\InstaTranslate\Support\PhpArrayFileHandler;
 use Laravel\Ai\AnonymousAgent;
+use Symfony\Component\Finder\Finder;
 use Symfony\Component\Finder\SplFileInfo;
 use Throwable;
 
@@ -156,32 +157,31 @@ class TranslationManager
         set_time_limit(120);
 
         $maxRetries = 2;
-        $attempt = 0;
-        
-        while ($attempt < $maxRetries) {
+        $attempt = 1;
+
+        while (true) {
             try {
                 $agent = new AnonymousAgent('You are a helpful translation assistant.', [], []);
                 $response = $agent->prompt($prompt, [], $provider, $model);
 
                 return $this->parseJsonResponse($response->text);
             } catch (Throwable $e) {
-                $attempt++;
-                
                 // If it's the last attempt or not a transient error, throw it.
-                if ($attempt >= $maxRetries || !preg_match('/(overloaded|429|503|rate limit)/i', $e->getMessage())) {
+                if ($attempt >= $maxRetries || ! preg_match('/(overloaded|429|503|rate limit)/i', $e->getMessage())) {
                     throw new Exception(ucfirst($provider).' API Error: '.$e->getMessage());
                 }
-                
+
                 // Exponential backoff: 2s, 4s, etc.
                 sleep(2 * $attempt);
+                $attempt++;
             }
         }
-        
-        return null;
     }
 
     /**
      * Parse the AI response expecting a JSON block.
+     *
+     * @return array<string, mixed>|null
      */
     public function parseJsonResponse(?string $content): ?array
     {
@@ -216,18 +216,19 @@ class TranslationManager
             app_path(),
             resource_path('js'),
             base_path('routes'),
-        ], fn ($path) => is_dir($path));
+        ], fn (string $path) => is_dir($path));
 
         if (empty($paths)) {
             return null;
         }
 
-        $finder = new \Symfony\Component\Finder\Finder();
+        $finder = new Finder;
         $finder->in($paths)->name('*.php')->name('*.vue')->name('*.js')->name('*.jsx')->name('*.tsx')->files();
 
         $usages = [];
         foreach ($finder as $file) {
             $contents = $file->getContents();
+
             if (str_contains($contents, $key)) {
                 $lines = explode("\n", $contents);
                 foreach ($lines as $i => $line) {
@@ -235,10 +236,10 @@ class TranslationManager
                         $start = max(0, $i - 1);
                         $end = min(count($lines) - 1, $i + 1);
                         $snippet = implode("\n", array_slice($lines, $start, $end - $start + 1));
-                        
+
                         $filename = $file->getRelativePathname();
                         $usages[] = "File: {$filename}\nCode snippet:\n{$snippet}";
-                        
+
                         if (count($usages) >= 3) {
                             break 2;
                         }
@@ -251,7 +252,7 @@ class TranslationManager
             return null;
         }
 
-        return "This text is used in the following codebase locations (use this to understand the context of how to translate it):\n\n" . implode("\n\n---\n\n", $usages);
+        return "This text is used in the following codebase locations (use this to understand the context of how to translate it):\n\n".implode("\n\n---\n\n", $usages);
     }
 
     /**
@@ -409,6 +410,7 @@ class TranslationManager
 
         return $summary;
     }
+
     /**
      * Get summary of all translations for the dashboard.
      *
@@ -459,16 +461,16 @@ class TranslationManager
 
                     foreach ($baseFlat as $key => $value) {
                         $fullKey = $filename.'::'.$key;
-                        
+
                         /** @var array{base_value: string, translations: array<string, string>, missing_in: list<string>} $data */
                         $data = $summary[$fullKey];
-                        
+
                         if (isset($existingFlat[$key])) {
                             $data['translations'][$locale] = (string) $existingFlat[$key];
                         } else {
                             $data['missing_in'][] = $locale;
                         }
-                        
+
                         $summary[$fullKey] = $data;
                     }
                 }
@@ -504,13 +506,13 @@ class TranslationManager
                 foreach ($baseTranslations as $key => $value) {
                     /** @var array{base_value: string, translations: array<string, string>, missing_in: list<string>} $data */
                     $data = $summary[$key];
-                    
+
                     if (isset($existingTranslations[$key])) {
                         $data['translations'][$locale] = (string) $existingTranslations[$key];
                     } else {
                         $data['missing_in'][] = $locale;
                     }
-                    
+
                     $summary[$key] = $data;
                 }
             }

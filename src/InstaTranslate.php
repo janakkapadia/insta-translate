@@ -1,25 +1,23 @@
 <?php
 
+declare(strict_types=1);
+
 namespace InstaRequest\InstaTranslate;
 
 use Closure;
+use Illuminate\Http\Request;
 
 class InstaTranslate
 {
     /**
      * The callback that should be used to authenticate InstaTranslate users.
-     *
-     * @var \Closure|null
      */
-    public static $authUsing;
+    public static ?Closure $authUsing = null;
 
     /**
      * Determine if the given request can access the InstaTranslate dashboard.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return bool
      */
-    public static function check($request)
+    public static function check(Request $request): bool
     {
         return (static::$authUsing ?: function () {
             return app()->environment('local');
@@ -28,14 +26,11 @@ class InstaTranslate
 
     /**
      * Set the callback that should be used to authenticate InstaTranslate users.
-     *
-     * @param  \Closure  $callback
-     * @return static
      */
-    public static function auth(Closure $callback)
+    public static function auth(Closure $callback): self
     {
         static::$authUsing = $callback;
 
-        return new static;
+        return new self;
     }
 }
