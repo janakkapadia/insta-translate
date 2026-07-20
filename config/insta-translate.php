@@ -23,6 +23,16 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Translation Mode
+    |--------------------------------------------------------------------------
+    |
+    | Set to 'json' to process JSON files, or 'php' for PHP array files.
+    |
+    */
+    'mode' => env('INSTA_TRANSLATE_MODE', 'json'),
+
+    /*
+    |--------------------------------------------------------------------------
     | API Keys
     |--------------------------------------------------------------------------
     |
@@ -40,6 +50,29 @@ return [
     |
     */
     'lang_path' => env('INSTA_TRANSLATE_LANG_PATH', base_path('lang')),
+
+    /*
+    |--------------------------------------------------------------------------
+    | InstaTranslate Dashboard Route Path
+    |--------------------------------------------------------------------------
+    |
+    | This is the URI path where the InstaTranslate dashboard will be accessible from.
+    | You can change this to any path you like (e.g., 'translations-ui').
+    |
+    */
+    'path' => env('INSTA_TRANSLATE_PATH', 'insta-translate'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | InstaTranslate Dashboard Route Middleware
+    |--------------------------------------------------------------------------
+    |
+    | These middleware will get attached onto each InstaTranslate dashboard route,
+    | giving you the chance to add your own middleware to this list or change
+    | any of the existing middleware.
+    |
+    */
+    'middleware' => ['web'],
 
     /*
     |--------------------------------------------------------------------------

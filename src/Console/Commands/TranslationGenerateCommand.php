@@ -7,41 +7,38 @@ namespace InstaRequest\InstaTranslate\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use InstaRequest\InstaTranslate\Support\PhpArrayFileHandler;
-use Laravel\Ai\AnonymousAgent;
+use InstaRequest\InstaTranslate\TranslationManager;
 use Symfony\Component\Finder\SplFileInfo;
 use Throwable;
 
 class TranslationGenerateCommand extends Command
 {
     /**
-     * The command signature.
-     */
-    protected $signature = 'translation:generate 
-                            {--batch=50 : Number of keys to translate per API request}
-                            {--model= : Which model to use (e.g. claude-3-opus-20240229, gemini-1.5-pro). Overrides env config.}
-                            {--lang= : Specific language code to translate/create (e.g., fr, hi).}
-                            {--key=* : Specific keys to translate (can be used multiple times). Overrides the missing check.}
-                            {--multiple : Generate multiple translation options to choose from.}
-                            {--all : Translate all keys, overwriting existing translations.}
-                            {--context= : Provide context about what these strings are for (e.g. "SaaS billing dashboard").}
-                            {--php : Process PHP array files (lang/en/*.php) instead of JSON.}';
-
-    /**
-     * The command description.
-     */
-    protected $description = 'Generate translations using Anthropic or Google AI models.';
-
-    /**
-     * Glossary data loaded from glossary.json.
+     * The name and signature of the console command.
      *
-     * @var array{never_translate?: list<string>, specific_translations?: array<string, array<string, string>>}
+     * @var string
      */
-    private array $glossary = [];
+    protected $signature = 'translation:generate
+                            {--batch=10 : The number of keys to translate per API request}
+                            {--model= : The model to use for translation (e.g., claude, gemini, gemma-2-2b-it)}
+                            {--all : Translate all keys, overwriting existing ones}
+                            {--key=* : Only translate specific keys (can be used multiple times)}
+                            {--lang= : Only translate for a specific language code}
+                            {--multiple : Generate 3 variations per key and ask user to choose}
+                            {--context= : Provide context for the AI about the application domain or terminology}
+                            {--php : Process PHP array files instead of JSON files}';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Generate missing translations using AI';
 
     /**
      * Execute the console command.
      */
-    public function handle(): int
+    public function handle(TranslationManager $manager): int
     {
         $this->line('Translation generation started.');
 
@@ -49,16 +46,14 @@ class TranslationGenerateCommand extends Command
         $langDir = rtrim(config('insta-translate.lang_path', base_path('lang')), '/');
         $phpMode = (bool) $this->option('php');
 
-        $this->loadGlossary();
-
         if ($phpMode) {
-            return $this->handlePhpFiles($langDir, $defaultLang);
+            return $this->handlePhpFiles($manager, $langDir, $defaultLang);
         }
 
-        return $this->handleJsonFiles($langDir, $defaultLang);
+        return $this->handleJsonFiles($manager, $langDir, $defaultLang);
     }
 
-    private function handleJsonFiles(string $langDir, string $defaultLang): int
+    private function handleJsonFiles(TranslationManager $manager, string $langDir, string $defaultLang): int
     {
         $baseLangFile = $langDir.'/'.$defaultLang.'.json';
 
@@ -94,22 +89,19 @@ class TranslationGenerateCommand extends Command
         }
 
         if ($langOption) {
-            $localeFile = str_ends_with($langOption, '.json') ? $langOption : $langOption.'.json';
-            $locales = collect([$localeFile]);
+            $targetLocales = [$langOption];
         } else {
-            $locales = collect(File::files($langDir))
-                ->map(fn (SplFileInfo $file) => $file->getFilename())
-                ->filter(fn (string $file) => str_ends_with($file, '.json') && $file !== $defaultLang.'.json' && ! str_starts_with($file, 'php_'));
+            $targetLocales = $manager->getJsonLocales($langDir, $defaultLang);
         }
 
-        foreach ($locales as $localeFile) {
+        foreach ($targetLocales as $targetLocale) {
+            $localeFile = $targetLocale.'.json';
             $localePath = $langDir.'/'.$localeFile;
-            $targetLocale = str_replace('.json', '', $localeFile);
             $this->info("Processing locale: {$targetLocale}");
 
             $existingTranslations = File::exists($localePath) ? json_decode(File::get($localePath), true) ?? [] : [];
 
-            $missingKeys = $this->resolveMissingKeys($baseTranslations, $existingTranslations, $specificKeys, $translateAll, $defaultLang, $targetLocale);
+            $missingKeys = $manager->resolveMissingKeys($baseTranslations, $existingTranslations, $specificKeys, $translateAll);
 
             if (empty($missingKeys)) {
                 $this->line("No missing translations for {$targetLocale}.");
@@ -124,22 +116,26 @@ class TranslationGenerateCommand extends Command
             foreach ($chunks as $index => $chunk) {
                 $this->line('Translating batch '.($index + 1).' of '.count($chunks).'...');
 
-                $translatedChunk = $this->translateChunk($chunk, $targetLocale, $model, $defaultLang, $multiple, $context);
+                try {
+                    $translatedChunk = $manager->translateChunk($chunk, $targetLocale, $model, $defaultLang, $multiple, $context);
 
-                if ($translatedChunk) {
-                    $translatedChunk = $this->applyGlossaryOverrides($translatedChunk, $targetLocale);
+                    if ($translatedChunk) {
+                        $translatedChunk = $manager->applyGlossaryOverrides($translatedChunk, $targetLocale);
 
-                    foreach ($translatedChunk as $key => $value) {
-                        if ($multiple && is_array($value)) {
-                            $options = array_map(fn (mixed $val) => (string) $val, $value);
-                            $selected = $this->choice("Select translation for '{$key}' in {$targetLocale}", $options, 0);
-                            $existingTranslations[$key] = $selected;
-                        } else {
-                            $existingTranslations[$key] = is_array($value) ? (string) ($value[0] ?? '') : (string) $value;
+                        foreach ($translatedChunk as $key => $value) {
+                            if ($multiple && is_array($value)) {
+                                $options = array_map(fn (mixed $val) => (string) $val, $value);
+                                $selected = $this->choice("Select translation for '{$key}' in {$targetLocale}", $options, 0);
+                                $existingTranslations[$key] = $selected;
+                            } else {
+                                $existingTranslations[$key] = is_array($value) ? (string) ($value[0] ?? '') : (string) $value;
+                            }
                         }
+                    } else {
+                        $this->error('Failed to translate batch '.($index + 1).'. Skipping.');
                     }
-                } else {
-                    $this->error('Failed to translate batch '.($index + 1).'. Skipping.');
+                } catch (Throwable $e) {
+                    $this->error('API Error: '.$e->getMessage());
                 }
             }
 
@@ -153,7 +149,7 @@ class TranslationGenerateCommand extends Command
         return self::SUCCESS;
     }
 
-    private function handlePhpFiles(string $langDir, string $defaultLang): int
+    private function handlePhpFiles(TranslationManager $manager, string $langDir, string $defaultLang): int
     {
         $baseDir = $langDir.'/'.$defaultLang;
 
@@ -177,11 +173,7 @@ class TranslationGenerateCommand extends Command
         if ($langOption) {
             $targetLocales = [$langOption];
         } else {
-            $targetLocales = collect(File::directories($langDir))
-                ->map(fn (string $dir) => basename($dir))
-                ->filter(fn (string $dir) => $dir !== $defaultLang)
-                ->values()
-                ->all();
+            $targetLocales = $manager->getPhpLocales($langDir, $defaultLang);
         }
 
         foreach ($baseFiles as $baseFile) {
@@ -203,13 +195,7 @@ class TranslationGenerateCommand extends Command
                     ? $handler->flattenWithDot($handler->read($targetPath))
                     : [];
 
-                $missingKeys = [];
-
-                foreach ($baseFlat as $key => $value) {
-                    if ($translateAll || ! isset($existingFlat[$key])) {
-                        $missingKeys[$key] = $value;
-                    }
-                }
+                $missingKeys = $manager->resolveMissingKeys($baseFlat, $existingFlat, [], $translateAll);
 
                 if (empty($missingKeys)) {
                     $this->line("  No missing translations for {$targetLocale}/{$filename}.");
@@ -224,16 +210,20 @@ class TranslationGenerateCommand extends Command
                 foreach ($chunks as $index => $chunk) {
                     $this->line('  Translating batch '.($index + 1).' of '.count($chunks).'...');
 
-                    $translatedChunk = $this->translateChunk($chunk, $targetLocale, $model, $defaultLang, false, $context);
+                    try {
+                        $translatedChunk = $manager->translateChunk($chunk, $targetLocale, $model, $defaultLang, false, $context);
 
-                    if ($translatedChunk) {
-                        $translatedChunk = $this->applyGlossaryOverrides($translatedChunk, $targetLocale);
+                        if ($translatedChunk) {
+                            $translatedChunk = $manager->applyGlossaryOverrides($translatedChunk, $targetLocale);
 
-                        foreach ($translatedChunk as $key => $translatedValue) {
-                            $existingFlat[$key] = (string) $translatedValue;
+                            foreach ($translatedChunk as $key => $translatedValue) {
+                                $existingFlat[$key] = (string) $translatedValue;
+                            }
+                        } else {
+                            $this->error('  Failed to translate batch '.($index + 1).'. Skipping.');
                         }
-                    } else {
-                        $this->error('  Failed to translate batch '.($index + 1).'. Skipping.');
+                    } catch (Throwable $e) {
+                        $this->error('  API Error: '.$e->getMessage());
                     }
                 }
 
@@ -247,209 +237,5 @@ class TranslationGenerateCommand extends Command
         $this->info('Translation generation complete.');
 
         return self::SUCCESS;
-    }
-
-    /**
-     * Resolve which keys need to be translated.
-     *
-     * @param  array<string, string>  $baseTranslations
-     * @param  array<string, string>  $existingTranslations
-     * @param  array<int, string>  $specificKeys
-     * @return array<string, string>
-     */
-    private function resolveMissingKeys(array $baseTranslations, array $existingTranslations, array $specificKeys, bool $translateAll, string $defaultLang, string $targetLocale): array
-    {
-        $missingKeys = [];
-
-        if (! empty($specificKeys)) {
-            foreach ($specificKeys as $key) {
-                if (isset($baseTranslations[$key])) {
-                    if (isset($existingTranslations[$key]) && ! $translateAll) {
-                        if (! $this->confirm("Key '{$key}' already exists in {$targetLocale}. Do you want to regenerate it?", false)) {
-                            continue;
-                        }
-                    }
-                    $missingKeys[$key] = $baseTranslations[$key];
-                } else {
-                    $this->warn("Key '{$key}' not found in {$defaultLang}.json. Skipping.");
-                }
-            }
-        } else {
-            foreach ($baseTranslations as $key => $value) {
-                if ($translateAll || ! isset($existingTranslations[$key])) {
-                    $missingKeys[$key] = $value;
-                }
-            }
-        }
-
-        return $missingKeys;
-    }
-
-    /**
-     * @param  array<string, string>  $chunk
-     * @return array<string, mixed>|null
-     */
-    private function translateChunk(array $chunk, string $targetLocale, string $model, string $defaultLang, bool $multiple = false, ?string $context = null): ?array
-    {
-        $glossaryInstructions = $this->buildGlossaryPrompt($targetLocale);
-        $contextLine = $context !== null ? "Context: {$context}\n" : '';
-
-        if ($multiple) {
-            $prompt = $contextLine.
-                "Translate the following JSON key-value pairs from {$defaultLang} to {$targetLocale}. ".
-                'Keep the keys exactly the same. Do not translate placeholders like :name or {value}. '.
-                $glossaryInstructions.
-                'Provide 3 distinct translation variations for each key. '.
-                "Return ONLY a valid JSON object where keys are the same, and the value is a JSON array of 3 strings. No markdown formatting or other text.\n\n".
-                json_encode($chunk, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-        } else {
-            $prompt = $contextLine.
-                "Translate the following JSON key-value pairs from {$defaultLang} to {$targetLocale}. ".
-                'Keep the keys exactly the same. Do not translate placeholders like :name or {value}. '.
-                $glossaryInstructions.
-                "Return ONLY a valid JSON object without markdown formatting or other text.\n\n".
-                json_encode($chunk, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-        }
-
-        $actualModel = $this->resolveModelName($model);
-
-        if (str_starts_with($actualModel, 'claude')) {
-            return $this->callAi($prompt, $actualModel, 'anthropic');
-        } elseif (str_starts_with($actualModel, 'gemini') || str_starts_with($actualModel, 'gemma')) {
-            return $this->callAi($prompt, $actualModel, 'gemini');
-        }
-
-        $this->error("Unknown or unsupported model prefix: {$actualModel}");
-
-        return null;
-    }
-
-    private function resolveModelName(string $model): string
-    {
-        if ($model === 'claude') {
-            return 'claude-3-5-sonnet-20241022';
-        }
-
-        if ($model === 'gemini') {
-            return 'gemini-1.5-flash';
-        }
-
-        return $model;
-    }
-
-    /**
-     * @return array<string, mixed>|null
-     */
-    private function callAi(string $prompt, string $model, string $provider): ?array
-    {
-        try {
-            $agent = new AnonymousAgent('You are a helpful translation assistant.', [], []);
-            $response = $agent->prompt($prompt, [], $provider, $model);
-
-            return $this->parseJsonResponse($response->text);
-        } catch (Throwable $e) {
-            $this->error(ucfirst($provider).' API Error: '.$e->getMessage());
-
-            return null;
-        }
-    }
-
-    /**
-     * @return array<string, mixed>|null
-     */
-    private function parseJsonResponse(?string $content): ?array
-    {
-        if (! $content) {
-            return null;
-        }
-
-        // Remove possible markdown backticks
-        $content = preg_replace('/```json\s*(.*?)\s*```/s', '$1', $content);
-        $content = preg_replace('/```\s*(.*?)\s*```/s', '$1', $content);
-
-        $decoded = json_decode($content, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            $this->error('Failed to parse JSON response: '.json_last_error_msg());
-            $this->line('Raw response: '.$content);
-
-            return null;
-        }
-
-        return $decoded;
-    }
-
-    /**
-     * Load glossary from the configured path.
-     */
-    private function loadGlossary(): void
-    {
-        $glossaryPath = config('insta-translate.glossary_path', base_path('lang/glossary.json'));
-
-        if (! File::exists($glossaryPath)) {
-            return;
-        }
-
-        $data = json_decode(File::get($glossaryPath), true);
-
-        if (is_array($data)) {
-            $this->glossary = $data;
-            $this->line('Glossary loaded with '.count($data['never_translate'] ?? []).' protected term(s) and '.count($data['specific_translations'] ?? []).' override(s).');
-        }
-    }
-
-    /**
-     * Build prompt instructions from the glossary for a given target locale.
-     */
-    private function buildGlossaryPrompt(string $targetLocale): string
-    {
-        $parts = [];
-
-        $neverTranslate = $this->glossary['never_translate'] ?? [];
-
-        if ($neverTranslate !== []) {
-            $terms = implode(', ', array_map(fn (string $t) => "\"$t\"", $neverTranslate));
-            $parts[] = "IMPORTANT: The following terms are brand names or technical terms and must NEVER be translated. Keep them exactly as-is in the output: {$terms}. ";
-        }
-
-        $specificTranslations = $this->glossary['specific_translations'] ?? [];
-        $localeOverrides = [];
-        foreach ($specificTranslations as $term => $locales) {
-            if (isset($locales[$targetLocale])) {
-                $localeOverrides[] = "\"{$term}\" must be translated as \"{$locales[$targetLocale]}\"";
-            }
-        }
-
-        if ($localeOverrides !== []) {
-            $parts[] = 'Use these mandatory translations: '.implode('; ', $localeOverrides).'. ';
-        }
-
-        return implode('', $parts);
-    }
-
-    /**
-     * Apply glossary-specific translation overrides after getting AI response.
-     *
-     * @param  array<string, mixed>  $translations
-     * @return array<string, mixed>
-     */
-    private function applyGlossaryOverrides(array $translations, string $targetLocale): array
-    {
-        $specificTranslations = $this->glossary['specific_translations'] ?? [];
-
-        foreach ($translations as $key => $value) {
-            if (! is_string($value)) {
-                continue;
-            }
-
-            foreach ($specificTranslations as $term => $locales) {
-                if (isset($locales[$targetLocale]) && stripos($value, $term) !== false) {
-                    // If the translated value contains a glossary term, replace it with the override
-                    $translations[$key] = str_ireplace($term, $locales[$targetLocale], $value);
-                }
-            }
-        }
-
-        return $translations;
     }
 }
