@@ -38,16 +38,9 @@ INSTA_TRANSLATE_LANG_PATH=./lang
 # The base language to translate from (defaults to "en")
 INSTA_TRANSLATE_DEFAULT_LANGUAGE=en
 
-# Add your API Keys
-INSTA_TRANSLATE_CLAUDE_KEY=your_anthropic_api_key_here
-INSTA_TRANSLATE_GEMINI_KEY=your_google_gemini_api_key_here
-
-# Number of times to retry failed API requests (defaults to 3)
-# Automatically retries on Network Connection Errors, 429 Too Many Requests, and 5xx Server Errors.
-INSTA_TRANSLATE_RETRY_ATTEMPTS=3
-
-# Number of seconds to wait before retrying (defaults to 30)
-INSTA_TRANSLATE_RETRY_DELAY_SECONDS=30
+# Add your API Keys (managed automatically by Laravel AI SDK)
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+GEMINI_API_KEY=your_google_gemini_api_key_here
 ```
 
 You can optionally publish the configuration file to customize the default model behavior:

@@ -1,6 +1,13 @@
 # Release Notes
 
-## [Unreleased](https://github.com/janakkapadia/insta-translate/compare/0.1.6...HEAD)
+## [Unreleased](https://github.com/janakkapadia/insta-translate/compare/0.1.7...HEAD)
+
+## [0.1.7](https://github.com/janakkapadia/insta-translate/compare/0.1.6...0.1.7) - 2026-07-20
+
+### Changed
+- Refactored `translation:generate` command to use the official `laravel/ai` SDK for prompting LLMs instead of manual HTTP requests.
+- API keys are now automatically resolved by `laravel/ai` via standard environment variables (e.g., `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`).
+- Removed custom `retry_attempts` and `retry_delay_seconds` config as error handling is deferred to the AI SDK.
 
 ## [0.1.6](https://github.com/janakkapadia/insta-translate/compare/0.1.5...0.1.6) - 2026-07-20
 

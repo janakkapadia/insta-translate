@@ -25,9 +25,11 @@ return [
     |--------------------------------------------------------------------------
     | API Keys
     |--------------------------------------------------------------------------
+    |
+    | API keys are managed directly by Laravel AI using standard env variables:
+    | ANTHROPIC_API_KEY, GEMINI_API_KEY, etc.
+    |
     */
-    'claude_key' => env('INSTA_TRANSLATE_CLAUDE_KEY'),
-    'gemini_key' => env('INSTA_TRANSLATE_GEMINI_KEY'),
 
     /*
     |--------------------------------------------------------------------------
@@ -39,23 +41,4 @@ return [
     */
     'lang_path' => env('INSTA_TRANSLATE_LANG_PATH', base_path('lang')),
 
-    /*
-    |--------------------------------------------------------------------------
-    | Retry Attempts
-    |--------------------------------------------------------------------------
-    |
-    | The number of times to retry an API request if it fails.
-    |
-    */
-    'retry_attempts' => env('INSTA_TRANSLATE_RETRY_ATTEMPTS', 3),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Retry Delay
-    |--------------------------------------------------------------------------
-    |
-    | The number of seconds to wait before retrying a failed API request.
-    |
-    */
-    'retry_delay_seconds' => (int) env('INSTA_TRANSLATE_RETRY_DELAY_SECONDS', 30),
 ];

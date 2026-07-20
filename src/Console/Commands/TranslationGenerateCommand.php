@@ -5,11 +5,8 @@ declare(strict_types=1);
 namespace InstaRequest\InstaTranslate\Console\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Http\Client\ConnectionException;
-use Illuminate\Http\Client\PendingRequest;
-use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Http;
+use Laravel\Ai\AnonymousAgent;
 use Symfony\Component\Finder\SplFileInfo;
 use Throwable;
 
@@ -175,9 +172,9 @@ class TranslationGenerateCommand extends Command
         $actualModel = $this->resolveModelName($model);
 
         if (str_starts_with($actualModel, 'claude')) {
-            return $this->callClaude($prompt, $actualModel);
+            return $this->callAi($prompt, $actualModel, 'anthropic');
         } elseif (str_starts_with($actualModel, 'gemini') || str_starts_with($actualModel, 'gemma')) {
-            return $this->callGemini($prompt, $actualModel);
+            return $this->callAi($prompt, $actualModel, 'gemini');
         }
 
         $this->error("Unknown or unsupported model prefix: {$actualModel}");
@@ -198,109 +195,18 @@ class TranslationGenerateCommand extends Command
         return $model;
     }
 
-    /**
-     * @return array<string, mixed>|null
-     */
-    private function callClaude(string $prompt, string $model): ?array
+    private function callAi(string $prompt, string $model, string $provider): ?array
     {
-        $apiKey = config('insta-translate.claude_key');
-
-        if (empty($apiKey)) {
-            $this->error('Claude API key is missing.');
-
-            return null;
-        }
-
-        $retryAttempts = (int) config('insta-translate.retry_attempts', 3);
-        $retryDelay = (int) config('insta-translate.retry_delay_seconds', 30) * 1000;
-
-        $response = Http::retry(
-            $retryAttempts,
-            $retryDelay,
-            function (Throwable $exception, PendingRequest $request) {
-                if ($exception instanceof ConnectionException) {
-                    return true;
-                }
-
-                $response = $exception instanceof RequestException ? $exception->response : null;
-
-                return $response && ($response->status() === 429 || $response->serverError());
-            },
-        )->withHeaders([
-            'x-api-key' => $apiKey,
-            'anthropic-version' => '2023-06-01',
-            'content-type' => 'application/json',
-        ])->post('https://api.anthropic.com/v1/messages', [
-            'model' => $model,
-            'max_tokens' => 4096,
-            'messages' => [
-                ['role' => 'user', 'content' => $prompt],
-            ],
-        ]);
-
-        if (! $response->successful()) {
-            $this->error('Claude API Error: '.$response->body());
+        try {
+            $agent = new AnonymousAgent('You are a helpful translation assistant.', [], []);
+            $response = $agent->prompt($prompt, [], $provider, $model);
+            
+            return $this->parseJsonResponse($response->text);
+        } catch (Throwable $e) {
+            $this->error(ucfirst($provider) . ' API Error: ' . $e->getMessage());
 
             return null;
         }
-
-        $content = $response->json('content.0.text');
-
-        return $this->parseJsonResponse($content);
-    }
-
-    /**
-     * @return array<string, mixed>|null
-     */
-    private function callGemini(string $prompt, string $model): ?array
-    {
-        $apiKey = config('insta-translate.gemini_key');
-
-        if (empty($apiKey)) {
-            $this->error('Gemini API key is missing.');
-
-            return null;
-        }
-
-        $retryAttempts = (int) config('insta-translate.retry_attempts', 3);
-        $retryDelay = (int) config('insta-translate.retry_delay_seconds', 30) * 1000;
-
-        $response = Http::retry(
-            $retryAttempts,
-            $retryDelay,
-            function (Throwable $exception, PendingRequest $request) {
-                if ($exception instanceof ConnectionException) {
-                    return true;
-                }
-
-                $response = $exception instanceof RequestException ? $exception->response : null;
-
-                return $response && ($response->status() === 429 || $response->serverError());
-            },
-        )->withHeaders([
-            'Content-Type' => 'application/json',
-        ])->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}", [
-            'contents' => [
-                [
-                    'parts' => [
-                        ['text' => $prompt],
-                    ],
-                ],
-            ],
-            'generationConfig' => [
-                'responseMimeType' => 'application/json',
-            ],
-        ]);
-
-        if (! $response->successful()) {
-            $this->error('Gemini API Error: '.$response->body());
-
-            return null;
-        }
-
-        $content = $response->json('candidates.0.content.parts.0.text');
-
-        return $this->parseJsonResponse($content);
     }
 
     /**
