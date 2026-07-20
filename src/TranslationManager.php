@@ -152,7 +152,10 @@ class TranslationManager
      */
     public function callAi(string $prompt, string $model, string $provider): ?array
     {
-        $maxRetries = 3;
+        // Increase time limit so retry sleeps and API timeouts don't cause a 500 Fatal Error (which breaks JSON response)
+        set_time_limit(120);
+
+        $maxRetries = 2;
         $attempt = 0;
         
         while ($attempt < $maxRetries) {
@@ -165,7 +168,6 @@ class TranslationManager
                 $attempt++;
                 
                 // If it's the last attempt or not a transient error, throw it.
-                // "overloaded" or "429" typically indicates a rate limit or temporary unavailability.
                 if ($attempt >= $maxRetries || !preg_match('/(overloaded|429|503|rate limit)/i', $e->getMessage())) {
                     throw new Exception(ucfirst($provider).' API Error: '.$e->getMessage());
                 }
@@ -179,7 +181,7 @@ class TranslationManager
     }
 
     /**
-     * @return array<string, mixed>|null
+     * Parse the AI response expecting a JSON block.
      */
     public function parseJsonResponse(?string $content): ?array
     {
@@ -187,16 +189,69 @@ class TranslationManager
             return null;
         }
 
-        $content = preg_replace('/```json\s*(.*?)\s*```/s', '$1', $content);
-        $content = preg_replace('/```\s*(.*?)\s*```/s', '$1', $content);
+        // Try to extract JSON from markdown code blocks
+        if (preg_match('/```json\s*(.*?)\s*```/s', $content, $matches)) {
+            $content = $matches[1];
+        } else {
+            // ... fallback parsing ...
+            $content = trim($content);
+        }
 
-        $decoded = json_decode($content, true);
+        $data = json_decode($content, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
             throw new Exception('Failed to parse JSON response: '.json_last_error_msg());
         }
 
-        return $decoded;
+        return $data;
+    }
+
+    /**
+     * Automatically scan the codebase to find where a key is used to provide context to the AI.
+     */
+    public function findKeyContextInCode(string $key): ?string
+    {
+        $paths = array_filter([
+            resource_path('views'),
+            app_path(),
+            resource_path('js'),
+            base_path('routes'),
+        ], fn ($path) => is_dir($path));
+
+        if (empty($paths)) {
+            return null;
+        }
+
+        $finder = new \Symfony\Component\Finder\Finder();
+        $finder->in($paths)->name('*.php')->name('*.vue')->name('*.js')->name('*.jsx')->name('*.tsx')->files();
+
+        $usages = [];
+        foreach ($finder as $file) {
+            $contents = $file->getContents();
+            if (str_contains($contents, $key)) {
+                $lines = explode("\n", $contents);
+                foreach ($lines as $i => $line) {
+                    if (str_contains($line, $key)) {
+                        $start = max(0, $i - 1);
+                        $end = min(count($lines) - 1, $i + 1);
+                        $snippet = implode("\n", array_slice($lines, $start, $end - $start + 1));
+                        
+                        $filename = $file->getRelativePathname();
+                        $usages[] = "File: {$filename}\nCode snippet:\n{$snippet}";
+                        
+                        if (count($usages) >= 3) {
+                            break 2;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (empty($usages)) {
+            return null;
+        }
+
+        return "This text is used in the following codebase locations (use this to understand the context of how to translate it):\n\n" . implode("\n\n---\n\n", $usages);
     }
 
     /**

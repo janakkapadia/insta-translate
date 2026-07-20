@@ -67,6 +67,10 @@ class DashboardController extends Controller
 
         $chunk = [$actualKey => $baseValue];
 
+        if (empty($context)) {
+            $context = $manager->findKeyContextInCode($actualKey);
+        }
+
         try {
             $translatedChunk = $manager->translateChunk($chunk, $targetLocale, $model, $defaultLang, false, $context);
 
