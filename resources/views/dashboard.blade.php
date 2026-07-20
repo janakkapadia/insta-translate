@@ -84,7 +84,7 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200 bg-white">
                         @foreach($missingTranslations as $key => $data)
-                        <tr x-data="translationRow('{{ addslashes($key) }}', '{{ addslashes($data['base_value']) }}', {{ json_encode($data['missing_in']) }})" x-show="!isFullyResolved" class="hover:bg-gray-50 transition-colors">
+                        <tr x-data='translationRow("{{ addslashes($key) }}", "{{ addslashes($data['base_value']) }}", {!! json_encode($data['missing_in']) !!})' x-show="!isFullyResolved" class="hover:bg-gray-50 transition-colors">
                             <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 align-top">
                                 <div class="font-mono text-xs text-indigo-600 break-all">{{ $key }}</div>
                             </td>
@@ -164,30 +164,53 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 bg-white">
-                        @foreach($allTranslations as $key => $data)
-                        <tr x-show="matchesSearch('{{ addslashes($key) }}', '{{ addslashes($data['base_value']) }}')" 
-                            x-data="{ rowData: {{ json_encode($data) }} }"
-                            @click="openSlideOver('{{ addslashes($key) }}', rowData)"
-                            class="hover:bg-gray-50 cursor-pointer transition-colors">
-                            <td class="py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 align-top break-words">
-                                <div class="font-mono text-xs text-indigo-600 break-all">{{ $key }}</div>
-                            </td>
-                            <td class="py-4 px-3 text-sm text-gray-500 align-top break-words">
-                                <div class="whitespace-pre-wrap">{{ $data['base_value'] }}</div>
-                            </td>
-                            <td class="py-4 px-3 sm:pr-6 text-sm text-gray-500 align-top text-right">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" 
-                                      :class="Object.keys(rowData.translations).length === {{ count($locales) }} ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'">
-                                    <span x-text="Object.keys(rowData.translations).length"></span> / {{ count($locales) }}
-                                </span>
-                            </td>
-                        </tr>
-                        @endforeach
+                        <template x-for="data in paginatedList" :key="data.key">
+                            <tr class="hover:bg-gray-50 cursor-pointer transition-colors" @click="openSlideOver(data.key, data)">
+                                <td class="py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 align-top break-words">
+                                    <div class="font-mono text-xs text-indigo-600 break-all" x-text="data.key"></div>
+                                </td>
+                                <td class="py-4 px-3 text-sm text-gray-500 align-top break-words">
+                                    <div class="whitespace-pre-wrap" x-text="data.base_value"></div>
+                                </td>
+                                <td class="py-4 px-3 sm:pr-6 text-sm text-gray-500 align-top text-right">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" 
+                                          :class="Object.keys(data.translations).length === {{ count($locales) }} ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'">
+                                        <span x-text="Object.keys(data.translations).length"></span> / {{ count($locales) }}
+                                    </span>
+                                </td>
+                            </tr>
+                        </template>
                     </tbody>
                 </table>
                 
                 <div x-show="!hasSearchResults()" class="p-12 text-center text-gray-500" x-cloak>
                     No translations found matching your search.
+                </div>
+                
+                <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6 flex items-center justify-between" x-show="totalPages > 1" x-cloak>
+                    <div class="flex-1 flex justify-between sm:hidden">
+                        <button @click="prevPage()" :disabled="page === 1" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50">Previous</button>
+                        <button @click="nextPage()" :disabled="page === totalPages" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50">Next</button>
+                    </div>
+                    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                        <div>
+                            <p class="text-sm text-gray-700">
+                                Showing <span class="font-medium" x-text="(page - 1) * perPage + 1"></span> to <span class="font-medium" x-text="Math.min(page * perPage, filteredList.length)"></span> of <span class="font-medium" x-text="filteredList.length"></span> results
+                            </p>
+                        </div>
+                        <div>
+                            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                <button @click="prevPage()" :disabled="page === 1" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50">
+                                    <span class="sr-only">Previous</span>
+                                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                </button>
+                                <button @click="nextPage()" :disabled="page === totalPages" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50">
+                                    <span class="sr-only">Next</span>
+                                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
+                                </button>
+                            </nav>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -232,7 +255,7 @@
                                 </div>
                                 
                                 <div class="space-y-6">
-                                    <template x-for="locale in {!! json_encode($locales) !!}" :key="locale">
+                                    <template x-for='locale in {!! json_encode($locales) !!}' :key="locale">
                                         <div class="bg-white border rounded-lg overflow-hidden shadow-sm focus-within:ring-1 focus-within:ring-indigo-500 focus-within:border-indigo-500">
                                             <div class="bg-gray-50 px-3 py-2 border-b flex justify-between items-center">
                                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800" x-text="locale"></span>
@@ -276,23 +299,47 @@
                 slideOverSaving: {},
                 slideOverSaved: {},
                 
+                allTranslationsList: {!! json_encode(collect($allTranslations)->map(function($data, $key) { $data['key'] = $key; return $data; })->values()) !!},
+                page: 1,
+                perPage: 50,
+                
+                get filteredList() {
+                    if (this.searchQuery === '') return this.allTranslationsList;
+                    const query = this.searchQuery.toLowerCase();
+                    return this.allTranslationsList.filter(item => {
+                        return item.key.toLowerCase().includes(query) || 
+                               (item.base_value && item.base_value.toLowerCase().includes(query));
+                    });
+                },
+                
+                get paginatedList() {
+                    const start = (this.page - 1) * this.perPage;
+                    return this.filteredList.slice(start, start + this.perPage);
+                },
+                
+                get totalPages() {
+                    return Math.ceil(this.filteredList.length / this.perPage);
+                },
+                
+                nextPage() {
+                    if (this.page < this.totalPages) this.page++;
+                },
+                
+                prevPage() {
+                    if (this.page > 1) this.page--;
+                },
+                
+                init() {
+                    this.$watch('searchQuery', () => {
+                        this.page = 1;
+                    });
+                },
+
                 generateAll() {
                     this.$event.target.dispatchEvent(new CustomEvent('generate-all', { bubbles: true }));
                 },
-                matchesSearch(key, baseValue) {
-                    if (this.searchQuery === '') return true;
-                    const query = this.searchQuery.toLowerCase();
-                    return key.toLowerCase().includes(query) || (baseValue && baseValue.toLowerCase().includes(query));
-                },
                 hasSearchResults() {
-                    if (this.searchQuery === '') return true;
-                    const query = this.searchQuery.toLowerCase();
-                    // We need a way to check if any matches exist. Since Alpine evaluates this reactively on the DOM,
-                    // we can just return true and let x-show hide the rows. 
-                    // Actually, to implement a "No results" message without parsing all data in JS, we can just use CSS:
-                    // table tbody tr:not([style*="display: none"])
-                    // But Alpine evaluates this. Let's return true for now. The table headers will still show.
-                    return true;
+                    return this.filteredList.length > 0;
                 },
                 openSlideOver(key, data) {
                     this.selectedKey = key;
