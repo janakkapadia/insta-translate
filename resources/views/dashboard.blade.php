@@ -444,7 +444,9 @@
                         }
                         
                         if (data.success) {
-                            this.slideOverDrafts[locale] = data.translation;
+                            if (confirm('Generated translation:\n\n' + data.translation + '\n\nDo you want to update this value?')) {
+                                this.slideOverDrafts[locale] = data.translation;
+                            }
                         } else {
                             alert('Error generating translation: ' + (data.error || 'Unknown error'));
                         }
