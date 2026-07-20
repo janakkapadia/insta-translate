@@ -432,14 +432,25 @@
                             })
                         });
                         
-                        const data = await response.json();
+                        let data;
+                        const contentType = response.headers.get("content-type");
+                        if (contentType && contentType.indexOf("application/json") !== -1) {
+                            data = await response.json();
+                        } else {
+                            const text = await response.text();
+                            console.error('Server returned non-JSON:', text);
+                            alert('Server error while generating translation. Check console for details. Status: ' + response.status);
+                            return;
+                        }
+                        
                         if (data.success) {
                             this.slideOverDrafts[locale] = data.translation;
                         } else {
                             alert('Error generating translation: ' + (data.error || 'Unknown error'));
                         }
                     } catch (e) {
-                        alert('Network error while generating translation.');
+                        console.error('Network error:', e);
+                        alert('Network error while generating translation: ' + e.message);
                     } finally {
                         this.slideOverGenerating[locale] = false;
                     }
