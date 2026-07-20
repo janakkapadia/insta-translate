@@ -1,7 +1,7 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
     "name": "janakkapadia/insta-translate",
-    "version": "0.4.0",
+    "version": "1.0.0",
     "description": "AI-powered translation management for Laravel using laravel/ai. Supports glossary protection, context-aware translations, PHP array files, and stale key pruning.",
     "keywords": [
         "laravel",
