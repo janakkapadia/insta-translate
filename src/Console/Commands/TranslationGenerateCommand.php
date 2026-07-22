@@ -42,8 +42,8 @@ class TranslationGenerateCommand extends Command
     {
         $this->line('Translation generation started.');
 
-        $defaultLang = config('insta-translate.default_language', 'en');
-        $langDir = rtrim(config('insta-translate.lang_path', base_path('lang')), '/');
+        $defaultLang = config('insta-translate.default_language') ?: 'en';
+        $langDir = rtrim(config('insta-translate.lang_path') ?: (function_exists('lang_path') ? lang_path() : base_path('lang')), '/');
         $phpMode = (bool) $this->option('php');
 
         if ($phpMode) {
@@ -72,7 +72,7 @@ class TranslationGenerateCommand extends Command
         }
 
         $batchSize = max(1, (int) $this->option('batch'));
-        $model = is_string($this->option('model')) ? $this->option('model') : (string) config('insta-translate.default_model', 'claude');
+        $model = is_string($this->option('model')) ? $this->option('model') : ((string) config('insta-translate.default_model') ?: 'claude');
         $translateAll = (bool) $this->option('all');
         $specificKeys = (array) $this->option('key');
         $multiple = (bool) $this->option('multiple');
@@ -161,7 +161,7 @@ class TranslationGenerateCommand extends Command
 
         $handler = new PhpArrayFileHandler;
         $batchSize = max(1, (int) $this->option('batch'));
-        $model = is_string($this->option('model')) ? $this->option('model') : (string) config('insta-translate.default_model', 'claude');
+        $model = is_string($this->option('model')) ? $this->option('model') : ((string) config('insta-translate.default_model') ?: 'claude');
         $translateAll = (bool) $this->option('all');
         $context = is_string($this->option('context')) ? $this->option('context') : null;
 

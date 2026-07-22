@@ -84,12 +84,12 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200 bg-white">
                         @foreach($missingTranslations as $key => $data)
-                        <tr x-data='translationRow("{{ addslashes($key) }}", "{{ addslashes($data['base_value']) }}", {!! json_encode($data['missing_in']) !!})' x-show="!isFullyResolved" class="hover:bg-gray-50 transition-colors">
+                        <tr x-data='translationRow("{{ addslashes($key) }}", "{{ is_array($data['base_value']) ? addslashes(json_encode($data['base_value'])) : addslashes($data['base_value']) }}", {!! json_encode($data['missing_in']) !!})' x-show="!isFullyResolved" class="hover:bg-gray-50 transition-colors">
                             <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 align-top">
                                 <div class="font-mono text-xs text-indigo-600 break-all">{{ $key }}</div>
                             </td>
                             <td class="py-4 px-3 text-sm text-gray-500 align-top">
-                                <div class="whitespace-pre-wrap">{{ $data['base_value'] }}</div>
+                                <div class="whitespace-pre-wrap">{{ is_array($data['base_value']) ? json_encode($data['base_value'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) : $data['base_value'] }}</div>
                             </td>
                             <td class="py-4 px-3 text-sm text-gray-500 align-top">
                                 <div class="space-y-4">
@@ -170,7 +170,7 @@
                                     <div class="font-mono text-xs text-indigo-600 break-all" x-text="data.key"></div>
                                 </td>
                                 <td class="py-4 px-3 text-sm text-gray-500 align-top break-words">
-                                    <div class="whitespace-pre-wrap" x-text="data.base_value"></div>
+                                    <div class="whitespace-pre-wrap" x-text="typeof data.base_value === 'string' ? data.base_value : JSON.stringify(data.base_value, null, 2)"></div>
                                 </td>
                                 <td class="py-4 px-3 sm:pr-6 text-sm text-gray-500 align-top text-right">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" 
@@ -251,7 +251,7 @@
                             <div class="relative flex-1 px-4 py-6 sm:px-6">
                                 <div class="mb-6 pb-6 border-b border-gray-200">
                                     <h3 class="text-sm font-medium text-gray-900 mb-2">Base Value ({{ $defaultLang }})</h3>
-                                    <div class="bg-gray-50 rounded-md p-3 text-sm text-gray-700 whitespace-pre-wrap border border-gray-200 mb-4" x-text="selectedData?.base_value"></div>
+                                    <div class="bg-gray-50 rounded-md p-3 text-sm text-gray-700 whitespace-pre-wrap border border-gray-200 mb-4" x-text="typeof selectedData?.base_value === 'string' ? selectedData?.base_value : JSON.stringify(selectedData?.base_value, null, 2)"></div>
                                     
                                     <label for="translation_context" class="block text-sm font-medium text-gray-700 mb-1">Optional Context (helps AI translate better)</label>
                                     <input type="text" id="translation_context" x-model="translationContext" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" placeholder="e.g. 'Button label on checkout page' or 'SaaS billing dashboard'">
@@ -338,10 +338,12 @@
                     const q = this.searchQuery.toLowerCase();
                     return this.allTranslationsList.filter(item => {
                         if (item.key.toLowerCase().includes(q)) return true;
-                        if (item.base_value && item.base_value.toLowerCase().includes(q)) return true;
+                        let bv = typeof item.base_value === 'string' ? item.base_value : JSON.stringify(item.base_value);
+                        if (bv && bv.toLowerCase().includes(q)) return true;
                         
                         for (const locale in item.translations) {
-                            if (item.translations[locale] && item.translations[locale].toLowerCase().includes(q)) return true;
+                            let tv = typeof item.translations[locale] === 'string' ? item.translations[locale] : JSON.stringify(item.translations[locale]);
+                            if (tv && tv.toLowerCase().includes(q)) return true;
                         }
                         
                         return false;

@@ -17,8 +17,8 @@ class DashboardController extends Controller
 {
     public function index(TranslationManager $manager): View
     {
-        $langDir = rtrim(config('insta-translate.lang_path', base_path('lang')), '/');
-        $defaultLang = config('insta-translate.default_language', 'en');
+        $langDir = rtrim(config('insta-translate.lang_path') ?: (function_exists('lang_path') ? lang_path() : base_path('lang')), '/');
+        $defaultLang = config('insta-translate.default_language') ?: 'en';
         $mode = config('insta-translate.mode', 'json');
 
         $missingTranslations = $manager->getMissingTranslationsSummary($langDir, $defaultLang, $mode);
@@ -51,8 +51,8 @@ class DashboardController extends Controller
         $targetLocale = $request->input('target_locale');
         $context = $request->input('context');
 
-        $defaultLang = config('insta-translate.default_language', 'en');
-        $model = config('insta-translate.default_model', 'claude');
+        $defaultLang = config('insta-translate.default_language') ?: 'en';
+        $model = config('insta-translate.default_model') ?: 'claude';
 
         // Strip filename from key if in PHP mode
         $mode = config('insta-translate.mode', 'json');
@@ -110,7 +110,7 @@ class DashboardController extends Controller
         $translation = $request->input('translation');
         $targetLocale = $request->input('target_locale');
         $mode = $request->input('mode');
-        $langDir = rtrim(config('insta-translate.lang_path', base_path('lang')), '/');
+        $langDir = rtrim(config('insta-translate.lang_path') ?: (function_exists('lang_path') ? lang_path() : base_path('lang')), '/');
 
         if ($mode === 'php') {
             $parts = explode('::', $key, 2);

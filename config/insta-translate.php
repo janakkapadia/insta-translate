@@ -9,7 +9,7 @@ return [
     | Supported models: "claude", "gemini"
     |
     */
-    'default_model' => env('INSTA_TRANSLATE_MODEL', 'claude'),
+    'default_model' => env('INSTA_TRANSLATE_MODEL') ?: 'claude',
 
     /*
     |--------------------------------------------------------------------------
@@ -19,7 +19,7 @@ return [
     | The default language code to use as the base for translations.
     |
     */
-    'default_language' => env('INSTA_TRANSLATE_DEFAULT_LANGUAGE', 'en'),
+    'default_language' => env('INSTA_TRANSLATE_DEFAULT_LANGUAGE') ?: 'en',
 
     /*
     |--------------------------------------------------------------------------
@@ -49,7 +49,7 @@ return [
     | The path where the JSON translation files are stored.
     |
     */
-    'lang_path' => env('INSTA_TRANSLATE_LANG_PATH', base_path('lang')),
+    'lang_path' => env('INSTA_TRANSLATE_LANG_PATH') ?: (function_exists('lang_path') ? lang_path() : base_path('lang')),
 
     /*
     |--------------------------------------------------------------------------

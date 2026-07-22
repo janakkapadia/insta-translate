@@ -493,7 +493,7 @@ class TranslationManager
             // Initialize all base keys
             foreach ($baseTranslations as $key => $value) {
                 $summary[$key] = [
-                    'base_value' => (string) $value,
+                    'base_value' => is_array($value) ? (string) json_encode($value, JSON_UNESCAPED_UNICODE) : (string) $value,
                     'translations' => [],
                     'missing_in' => [],
                 ];
@@ -508,7 +508,7 @@ class TranslationManager
                     $data = $summary[$key];
 
                     if (isset($existingTranslations[$key])) {
-                        $data['translations'][$locale] = (string) $existingTranslations[$key];
+                        $data['translations'][$locale] = is_array($existingTranslations[$key]) ? (string) json_encode($existingTranslations[$key], JSON_UNESCAPED_UNICODE) : (string) $existingTranslations[$key];
                     } else {
                         $data['missing_in'][] = $locale;
                     }

@@ -30,8 +30,8 @@ class TranslationPruneCommand extends Command
      */
     public function handle(TranslationManager $manager): int
     {
-        $defaultLang = config('insta-translate.default_language', 'en');
-        $langDir = rtrim(config('insta-translate.lang_path', base_path('lang')), '/');
+        $defaultLang = config('insta-translate.default_language') ?: 'en';
+        $langDir = rtrim(config('insta-translate.lang_path') ?: (function_exists('lang_path') ? lang_path() : base_path('lang')), '/');
         $dryRun = (bool) $this->option('dry-run');
         $phpMode = (bool) $this->option('php');
         $langOption = is_string($this->option('lang')) ? $this->option('lang') : null;
