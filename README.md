@@ -121,6 +121,10 @@ INSTA_TRANSLATE_GLOSSARY_PATH=./lang/glossary.json
 
 InstaTranslate includes a beautiful, interactive web dashboard where you can visually inspect missing translations, run AI translations in the browser, and review them before saving.
 
+![Dashboard - Missing Translations](./art/dashboard-missing.png)
+![Dashboard - All Translations](./art/dashboard-all.png)
+![Dashboard - Sidebar](./art/dashboard-sidebar.png)
+
 1. Ensure the package service provider is registered (this is automatic in Laravel 11+).
 2. Visit `/insta-translate` in your browser (e.g. `https://your-app.test/insta-translate`).
 
