@@ -23,5 +23,5 @@ This repository is a Laravel package. Keep the package focused, idiomatic, and e
 
 - `package-scaffold`: use when adding package capabilities or wiring them through the service provider, including commands, migrations, routes, config, views, translations, assets, middleware, publish tags, workbench files, and console-only behavior.
 - `package-testing`: use when adding or changing package tests with Pest 4 and Orchestra Testbench.
-- `package-release`: use when preparing changelog, release notes, tags, or GitHub release workflow changes.
+- `package-release`: use when preparing changelog, release notes, tags, or GitHub release workflow changes. ALWAYS remember to update the version number in composer.json (if used), create a git tag, and create a formal GitHub release using the GH CLI. Always prefix tags and release versions with "v".
 - `package-compatibility`: use when reviewing code, dependencies, or CI against the PHP and Laravel support matrix.
