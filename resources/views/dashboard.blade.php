@@ -145,38 +145,61 @@
         </div>
 
         <div x-show="tab === 'all'" x-transition x-cloak class="flex flex-col h-[calc(100vh-12rem)]">
-            <div class="mb-4">
-                <div class="relative rounded-md shadow-sm">
+            <div class="mb-4 flex flex-col sm:flex-row gap-4">
+                <div class="relative rounded-md shadow-sm flex-1">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                     </div>
                     <input type="text" x-model="searchQuery" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-2 border" placeholder="Search keys or base values...">
                 </div>
+                <div class="sm:w-48">
+                    <select x-model="selectedLanguage" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-2 px-3 border">
+                        <option value="all">All Languages</option>
+                        @foreach($locales as $locale)
+                        <option value="{{ $locale }}">{{ $locale }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <button x-show="selectedLanguage !== 'all' && selectedKeys.length > 0" @click="regenerateBatch()" :disabled="isGeneratingBatch" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors disabled:opacity-50" x-cloak>
+                    <svg x-show="isGeneratingBatch" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <span x-text="isGeneratingBatch ? 'Regenerating...' : 'Regenerate Selected (' + selectedKeys.length + ')'"></span>
+                </button>
             </div>
 
             <div class="bg-white shadow-sm ring-1 ring-black ring-opacity-5 md:rounded-lg overflow-hidden flex-1 overflow-y-auto mb-4">
                 <table class="min-w-full divide-y divide-gray-300">
                     <thead class="bg-gray-50 sticky top-0 z-10">
                         <tr>
+                            <th scope="col" class="relative w-12 px-6 sm:w-16 sm:px-8" x-show="selectedLanguage !== 'all'" x-cloak>
+                                <input type="checkbox" class="absolute left-4 top-1/2 -mt-2 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 sm:left-6" @change="toggleSelectAll($event)" :checked="selectedKeys.length > 0 && selectedKeys.length === paginatedList.length">
+                            </th>
                             <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 w-1/3">Key</th>
                             <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Base ({{ $defaultLang }})</th>
-                            <th scope="col" class="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 sm:pr-6 w-32">Status</th>
+                            <th scope="col" class="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 sm:pr-6 w-32" x-text="selectedLanguage === 'all' ? 'Status' : 'Translation (' + selectedLanguage + ')'"></th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 bg-white">
                         <template x-for="data in paginatedList" :key="data.key">
-                            <tr class="hover:bg-gray-50 cursor-pointer transition-colors" @click="openSlideOver(data.key, data)">
-                                <td class="py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 align-top break-words">
+                            <tr class="hover:bg-gray-50 transition-colors" :class="selectedKeys.includes(data.key) ? 'bg-indigo-50' : ''">
+                                <td class="relative w-12 px-6 sm:w-16 sm:px-8" x-show="selectedLanguage !== 'all'" x-cloak>
+                                    <input type="checkbox" class="absolute left-4 top-1/2 -mt-2 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 sm:left-6" :value="data.key" x-model="selectedKeys">
+                                </td>
+                                <td class="py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 align-top break-words cursor-pointer" @click="openSlideOver(data.key, data)">
                                     <div class="font-mono text-xs text-indigo-600 break-all" x-text="data.key"></div>
                                 </td>
-                                <td class="py-4 px-3 text-sm text-gray-500 align-top break-words">
+                                <td class="py-4 px-3 text-sm text-gray-500 align-top break-words cursor-pointer" @click="openSlideOver(data.key, data)">
                                     <div class="whitespace-pre-wrap" x-text="typeof data.base_value === 'string' ? data.base_value : JSON.stringify(data.base_value, null, 2)"></div>
                                 </td>
-                                <td class="py-4 px-3 sm:pr-6 text-sm text-gray-500 align-top text-right">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" 
-                                          :class="Object.keys(data.translations).length === {{ count($locales) }} ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'">
-                                        <span x-text="Object.keys(data.translations).length"></span> / {{ count($locales) }}
-                                    </span>
+                                <td class="py-4 px-3 sm:pr-6 text-sm text-gray-500 align-top text-right cursor-pointer" @click="openSlideOver(data.key, data)">
+                                    <div x-show="selectedLanguage === 'all'">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" 
+                                              :class="Object.keys(data.translations).length === {{ count($locales) }} ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'">
+                                            <span x-text="Object.keys(data.translations).length"></span> / {{ count($locales) }}
+                                        </span>
+                                    </div>
+                                    <div x-show="selectedLanguage !== 'all'" class="text-left" x-cloak>
+                                        <div class="whitespace-pre-wrap break-words text-gray-900" x-text="data.translations[selectedLanguage] ? (typeof data.translations[selectedLanguage] === 'string' ? data.translations[selectedLanguage] : JSON.stringify(data.translations[selectedLanguage], null, 2)) : '-'"></div>
+                                    </div>
                                 </td>
                             </tr>
                         </template>
@@ -316,6 +339,9 @@
             return {
                 tab: 'missing',
                 searchQuery: '',
+                selectedLanguage: 'all',
+                selectedKeys: [],
+                isGeneratingBatch: false,
                 page: 1,
                 perPage: 50,
                 
@@ -332,22 +358,32 @@
                 allTranslationsList: {!! json_encode(collect($allTranslations)->map(function($data, $key) { $data['key'] = $key; return $data; })->values()) !!},
                 
                 get filteredList() {
-                    if (this.searchQuery === '') {
-                        return this.allTranslationsList;
+                    let list = this.allTranslationsList;
+                    
+                    if (this.searchQuery !== '') {
+                        const q = this.searchQuery.toLowerCase();
+                        list = list.filter(item => {
+                            if (item.key.toLowerCase().includes(q)) return true;
+                            let bv = typeof item.base_value === 'string' ? item.base_value : JSON.stringify(item.base_value);
+                            if (bv && bv.toLowerCase().includes(q)) return true;
+                            
+                            if (this.selectedLanguage !== 'all') {
+                                let tv = item.translations[this.selectedLanguage];
+                                if (tv) {
+                                    tv = typeof tv === 'string' ? tv : JSON.stringify(tv);
+                                    if (tv.toLowerCase().includes(q)) return true;
+                                }
+                            } else {
+                                for (const locale in item.translations) {
+                                    let tv = typeof item.translations[locale] === 'string' ? item.translations[locale] : JSON.stringify(item.translations[locale]);
+                                    if (tv && tv.toLowerCase().includes(q)) return true;
+                                }
+                            }
+                            
+                            return false;
+                        });
                     }
-                    const q = this.searchQuery.toLowerCase();
-                    return this.allTranslationsList.filter(item => {
-                        if (item.key.toLowerCase().includes(q)) return true;
-                        let bv = typeof item.base_value === 'string' ? item.base_value : JSON.stringify(item.base_value);
-                        if (bv && bv.toLowerCase().includes(q)) return true;
-                        
-                        for (const locale in item.translations) {
-                            let tv = typeof item.translations[locale] === 'string' ? item.translations[locale] : JSON.stringify(item.translations[locale]);
-                            if (tv && tv.toLowerCase().includes(q)) return true;
-                        }
-                        
-                        return false;
-                    });
+                    return list;
                 },
                 
                 get paginatedList() {
@@ -371,7 +407,64 @@
                 init() {
                     this.$watch('searchQuery', () => {
                         this.page = 1;
+                        this.selectedKeys = [];
                     });
+                    this.$watch('selectedLanguage', () => {
+                        this.page = 1;
+                        this.selectedKeys = [];
+                    });
+                },
+
+                toggleSelectAll(e) {
+                    if (e.target.checked) {
+                        this.selectedKeys = this.paginatedList.map(item => item.key);
+                    } else {
+                        this.selectedKeys = [];
+                    }
+                },
+                
+                async regenerateBatch() {
+                    if (this.selectedKeys.length === 0 || this.selectedLanguage === 'all') return;
+                    
+                    this.isGeneratingBatch = true;
+                    
+                    const itemsToRegenerate = this.selectedKeys.map(key => {
+                        const item = this.allTranslationsList.find(i => i.key === key);
+                        return { key: key, base_value: item.base_value };
+                    });
+                    
+                    try {
+                        const response = await fetch('{{ route('insta-translate.api.generate-batch') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                items: itemsToRegenerate,
+                                target_locale: this.selectedLanguage
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        if (data.success && data.translations) {
+                            for (const key in data.translations) {
+                                const item = this.allTranslationsList.find(i => i.key === key);
+                                if (item) {
+                                    item.translations[this.selectedLanguage] = data.translations[key];
+                                }
+                            }
+                            this.selectedKeys = [];
+                            alert('Successfully regenerated ' + Object.keys(data.translations).length + ' translations!');
+                        } else {
+                            alert('Error: ' + (data.error || 'Unknown error'));
+                        }
+                    } catch (e) {
+                        alert('Network error while generating batch.');
+                    } finally {
+                        this.isGeneratingBatch = false;
+                    }
                 },
 
                 generateAll() {

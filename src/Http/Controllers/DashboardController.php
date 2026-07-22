@@ -104,6 +104,101 @@ class DashboardController extends Controller
         ], 500);
     }
 
+    public function generateBatch(Request $request, TranslationManager $manager): JsonResponse
+    {
+        $request->validate([
+            'items' => 'required|array',
+            'items.*.key' => 'required|string',
+            'items.*.base_value' => 'required',
+            'target_locale' => 'required|string',
+        ]);
+
+        $items = $request->input('items');
+        $targetLocale = $request->input('target_locale');
+
+        $defaultLang = config('insta-translate.default_language') ?: 'en';
+        $model = config('insta-translate.default_model') ?: 'claude';
+        $mode = config('insta-translate.mode', 'json');
+
+        // Group items by file if in PHP mode, or just create a simple chunk
+        $chunk = [];
+        $keyMap = []; // Maps actual key -> original key
+        foreach ($items as $item) {
+            $key = $item['key'];
+            $actualKey = $key;
+
+            if ($mode === 'php') {
+                $parts = explode('::', $key, 2);
+
+                if (count($parts) === 2) {
+                    $actualKey = $parts[1];
+                }
+            }
+            $chunk[$actualKey] = $item['base_value'];
+            $keyMap[$actualKey] = $key;
+        }
+
+        try {
+            // Translate the entire chunk in one go
+            $translatedChunk = $manager->translateChunk($chunk, $targetLocale, $model, $defaultLang, false);
+
+            if ($translatedChunk) {
+                $translatedChunk = $manager->applyGlossaryOverrides($translatedChunk, $targetLocale);
+
+                // Re-map back to original keys and ensure we have all translations
+                $results = [];
+                $keys = array_keys($chunk);
+                $translatedValues = array_values($translatedChunk);
+
+                foreach ($chunk as $actualKey => $baseVal) {
+                    $originalKey = $keyMap[$actualKey];
+
+                    // Match by actual key if present, otherwise try positional fallback if counts match, else null
+                    if (isset($translatedChunk[$actualKey])) {
+                        $val = $translatedChunk[$actualKey];
+                    } elseif (count($keys) === count($translatedValues)) {
+                        $idx = array_search($actualKey, $keys);
+                        $val = $idx !== false ? $translatedValues[$idx] : null;
+                    } else {
+                        $val = $translatedChunk[$originalKey] ?? null;
+                    }
+
+                    if ($val === null) {
+                        // Safe fallback, skip or use empty
+                        continue;
+                    }
+
+                    $translation = is_array($val) ? ($val[0] ?? '') : $val;
+                    $results[$originalKey] = (string) $translation;
+
+                    // Automatically save the translation by mocking a save request
+                    $saveRequest = new Request([
+                        'key' => $originalKey,
+                        'translation' => (string) $translation,
+                        'target_locale' => $targetLocale,
+                        'mode' => $mode,
+                    ]);
+                    $this->save($saveRequest);
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'translations' => $results,
+                ]);
+            }
+        } catch (Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => false,
+            'error' => 'Failed to generate batch translation.',
+        ], 500);
+    }
+
     public function save(Request $request): JsonResponse
     {
         $request->validate([

@@ -14,5 +14,6 @@ Route::group([
 ], function () {
     Route::get('/', [DashboardController::class, 'index'])->name('insta-translate.dashboard');
     Route::post('/api/generate', [DashboardController::class, 'generate'])->name('insta-translate.api.generate');
+    Route::post('/api/generate-batch', [DashboardController::class, 'generateBatch'])->name('insta-translate.api.generate-batch');
     Route::post('/api/save', [DashboardController::class, 'save'])->name('insta-translate.api.save');
 });
