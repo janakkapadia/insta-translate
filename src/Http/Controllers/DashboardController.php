@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace InstaRequest\InstaTranslate\Http\Controllers;
 
+use Exception;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -77,7 +78,13 @@ class DashboardController extends Controller
 
             if ($translatedChunk) {
                 $translatedChunk = $manager->applyGlossaryOverrides($translatedChunk, $targetLocale);
-                $translation = is_array($translatedChunk[$actualKey]) ? ($translatedChunk[$actualKey][0] ?? '') : $translatedChunk[$actualKey];
+                $translatedValue = $translatedChunk[$actualKey] ?? (reset($translatedChunk) ?: null);
+
+                if ($translatedValue === null) {
+                    throw new Exception('Translation not found in AI response.');
+                }
+
+                $translation = is_array($translatedValue) ? ($translatedValue[0] ?? '') : $translatedValue;
 
                 return response()->json([
                     'success' => true,
