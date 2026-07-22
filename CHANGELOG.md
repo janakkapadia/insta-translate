@@ -1,6 +1,11 @@
 # Release Notes
 
-## [Unreleased](https://github.com/janakkapadia/insta-translate/compare/v1.0.7...HEAD)
+## [Unreleased](https://github.com/janakkapadia/insta-translate/compare/v1.0.8...HEAD)
+
+## [v1.0.8](https://github.com/janakkapadia/insta-translate/compare/v1.0.7...v1.0.8) - 2026-07-22
+
+<!-- Release notes generated using configuration in .github/release.yml at v1.0.8 -->
+**Full Changelog**: https://github.com/janakkapadia/insta-translate/compare/v1.0.7...v1.0.8
 
 ## [v1.0.7](https://github.com/janakkapadia/insta-translate/compare/v1.0.6...v1.0.7) - 2026-07-22
 
