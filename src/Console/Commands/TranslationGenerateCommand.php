@@ -122,7 +122,12 @@ class TranslationGenerateCommand extends Command
                     if ($translatedChunk) {
                         $translatedChunk = $manager->applyGlossaryOverrides($translatedChunk, $targetLocale);
 
-                        foreach ($translatedChunk as $key => $value) {
+                        foreach ($chunk as $key => $baseVal) {
+                            if (! isset($translatedChunk[$key])) {
+                                continue;
+                            }
+                            $value = $translatedChunk[$key];
+
                             if ($multiple && is_array($value)) {
                                 $options = array_map(fn (mixed $val) => (string) $val, $value);
                                 $selected = $this->choice("Select translation for '{$key}' in {$targetLocale}", $options, 0);
@@ -216,8 +221,11 @@ class TranslationGenerateCommand extends Command
                         if ($translatedChunk) {
                             $translatedChunk = $manager->applyGlossaryOverrides($translatedChunk, $targetLocale);
 
-                            foreach ($translatedChunk as $key => $translatedValue) {
-                                $existingFlat[$key] = (string) $translatedValue;
+                            foreach ($chunk as $key => $baseVal) {
+                                if (! isset($translatedChunk[$key])) {
+                                    continue;
+                                }
+                                $existingFlat[$key] = (string) $translatedChunk[$key];
                             }
                         } else {
                             $this->error('  Failed to translate batch '.($index + 1).'. Skipping.');

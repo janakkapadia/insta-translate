@@ -93,6 +93,21 @@
                             </td>
                             <td class="py-4 px-3 text-sm text-gray-500 align-top">
                                 <div class="space-y-4">
+                                    <div class="flex space-x-2 pb-2 border-b border-gray-100" x-show="missingLocalesList.length > 1">
+                                        <button @click="generateAllLocales()" class="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                            <svg class="-ml-0.5 mr-2 h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                            </svg>
+                                            Generate All Missing Locales (<span x-text="missingLocalesList.length"></span>)
+                                        </button>
+                                        
+                                        <button x-show="hasAnyDraft" @click="approveAllLocales()" x-cloak class="inline-flex items-center px-3 py-1.5 border border-transparent shadow-sm text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                            <svg class="-ml-0.5 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            Approve All
+                                        </button>
+                                    </div>
                                     <template x-for="locale in missingLocales" :key="locale">
                                         <div class="border rounded-md p-3 bg-gray-50 relative" :class="{'ring-2 ring-indigo-500 ring-offset-1': isGenerating(locale), 'bg-green-50 border-green-200': isResolved(locale)}">
                                             
@@ -280,6 +295,23 @@
                                     <input type="text" id="translation_context" x-model="translationContext" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" placeholder="e.g. 'Button label on checkout page' or 'SaaS billing dashboard'">
                                 </div>
                                 
+                                <div class="flex space-x-3 mb-6">
+                                    <button @click="generateAllSlideOver()" :disabled="isGeneratingMultiSlideOver" class="flex-1 inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50">
+                                        <svg x-show="isGeneratingMultiSlideOver" class="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" x-cloak>
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Translate All Locales
+                                    </button>
+                                    <button @click="saveAllSlideOver()" :disabled="isSavingMultiSlideOver || !hasAnySlideOverDraft" class="flex-1 inline-flex justify-center items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50">
+                                        <svg x-show="isSavingMultiSlideOver" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" x-cloak>
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Accept All
+                                    </button>
+                                </div>
+                                
                                 <div class="space-y-6">
                                     <template x-for='locale in {!! json_encode($locales) !!}' :key="locale">
                                         <div class="bg-white border rounded-lg overflow-hidden shadow-sm focus-within:ring-1 focus-within:ring-indigo-500 focus-within:border-indigo-500">
@@ -354,6 +386,12 @@
                 slideOverSaved: {},
                 slideOverGenerating: {},
                 slideOverGeneratedDrafts: {},
+                isGeneratingMultiSlideOver: false,
+                isSavingMultiSlideOver: false,
+                
+                get hasAnySlideOverDraft() {
+                    return Object.keys(this.slideOverGeneratedDrafts).some(locale => this.slideOverGeneratedDrafts[locale] !== null);
+                },
                 
                 allTranslationsList: {!! json_encode(collect($allTranslations)->map(function($data, $key) { $data['key'] = $key; return $data; })->values()) !!},
                 
@@ -588,6 +626,100 @@
                     } finally {
                         this.slideOverGenerating[locale] = false;
                     }
+                },
+                async generateAllSlideOver() {
+                    this.isGeneratingMultiSlideOver = true;
+                    const localesToGenerate = {!! json_encode($locales) !!};
+                    
+                    try {
+                        const response = await fetch('{{ route('insta-translate.api.generate-multi-lang') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                key: this.selectedKey,
+                                base_value: this.selectedData.base_value,
+                                target_locales: localesToGenerate,
+                                context: this.translationContext
+                            })
+                        });
+                        
+                        let data;
+                        const contentType = response.headers.get("content-type");
+                        if (contentType && contentType.indexOf("application/json") !== -1) {
+                            data = await response.json();
+                        } else {
+                            const text = await response.text();
+                            alert('Server error. Status: ' + response.status);
+                            return;
+                        }
+                        
+                        if (data.success && data.translations) {
+                            for (const locale in data.translations) {
+                                this.slideOverGeneratedDrafts[locale] = data.translations[locale];
+                            }
+                        } else {
+                            alert('Error generating translations: ' + (data.error || 'Unknown error'));
+                        }
+                    } catch (e) {
+                        alert('Network error while generating translations: ' + e.message);
+                    } finally {
+                        this.isGeneratingMultiSlideOver = false;
+                    }
+                },
+                async saveAllSlideOver() {
+                    this.isSavingMultiSlideOver = true;
+                    
+                    const translationsToSave = {};
+                    for (const locale in this.slideOverGeneratedDrafts) {
+                        if (this.slideOverGeneratedDrafts[locale] !== null) {
+                            translationsToSave[locale] = this.slideOverGeneratedDrafts[locale];
+                        }
+                    }
+                    
+                    if (Object.keys(translationsToSave).length === 0) {
+                        this.isSavingMultiSlideOver = false;
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch('{{ route('insta-translate.api.save-multi-lang') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                key: this.selectedKey,
+                                translations: translationsToSave,
+                                mode: '{{ $mode }}'
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        if (data.success) {
+                            for (const locale in translationsToSave) {
+                                this.slideOverDrafts[locale] = translationsToSave[locale];
+                                this.selectedData.translations[locale] = translationsToSave[locale];
+                                this.slideOverGeneratedDrafts[locale] = null;
+                                
+                                this.slideOverSaved[locale] = true;
+                                setTimeout(() => {
+                                    this.slideOverSaved[locale] = false;
+                                }, 2000);
+                            }
+                        } else {
+                            alert('Error saving translations: ' + (data.error || 'Unknown error'));
+                        }
+                    } catch (e) {
+                        alert('Network error while saving translations.');
+                    } finally {
+                        this.isSavingMultiSlideOver = false;
+                    }
                 }
             }
         }
@@ -689,6 +821,90 @@
                         }
                     } catch (e) {
                         alert('Network error while saving translation.');
+                    }
+                },
+
+                get hasAnyDraft() {
+                    return this.missingLocales.some(l => this.hasDraft(l) && !this.isResolved(l));
+                },
+
+                get missingLocalesList() {
+                    return this.missingLocales.filter(l => !this.isResolved(l));
+                },
+
+                async generateAllLocales() {
+                    const localesToGenerate = this.missingLocales.filter(l => !this.isResolved(l));
+                    if (localesToGenerate.length === 0) return;
+
+                    localesToGenerate.forEach(l => this.generating[l] = true);
+                    
+                    try {
+                        const response = await fetch('{{ route('insta-translate.api.generate-multi-lang') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                key: this.key,
+                                base_value: this.baseValue,
+                                target_locales: localesToGenerate
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        if (data.success) {
+                            localesToGenerate.forEach(locale => {
+                                if (data.translations[locale]) {
+                                    this.drafts[locale] = data.translations[locale];
+                                }
+                            });
+                        } else {
+                            alert('Error generating translations: ' + (data.error || 'Unknown error'));
+                        }
+                    } catch (e) {
+                        alert('Network error while generating translations.');
+                    } finally {
+                        localesToGenerate.forEach(l => this.generating[l] = false);
+                    }
+                },
+
+                async approveAllLocales() {
+                    const translationsToSave = {};
+                    this.missingLocales.forEach(l => {
+                        if (this.hasDraft(l) && !this.isResolved(l)) {
+                            translationsToSave[l] = this.drafts[l];
+                        }
+                    });
+
+                    if (Object.keys(translationsToSave).length === 0) return;
+
+                    try {
+                        const response = await fetch('{{ route('insta-translate.api.save-multi-lang') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                key: this.key,
+                                translations: translationsToSave,
+                                mode: '{{ $mode }}'
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        if (data.success) {
+                            Object.keys(translationsToSave).forEach(locale => {
+                                this.resolved[locale] = true;
+                            });
+                        } else {
+                            alert('Error saving translations: ' + (data.error || 'Unknown error'));
+                        }
+                    } catch (e) {
+                        alert('Network error while saving translations.');
                     }
                 }
             }

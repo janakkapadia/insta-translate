@@ -199,6 +199,85 @@ class DashboardController extends Controller
         ], 500);
     }
 
+    public function generateMultiLang(Request $request, TranslationManager $manager): JsonResponse
+    {
+        $request->validate([
+            'key' => 'required|string',
+            'base_value' => 'required|string',
+            'target_locales' => 'required|array',
+            'context' => 'nullable|string',
+        ]);
+
+        $key = $request->input('key');
+        $baseValue = $request->input('base_value');
+        $targetLocales = $request->input('target_locales');
+        $context = $request->input('context');
+
+        $defaultLang = config('insta-translate.default_language') ?: 'en';
+        $model = config('insta-translate.default_model') ?: 'claude';
+        $mode = config('insta-translate.mode', 'json');
+
+        $actualKey = $key;
+
+        if ($mode === 'php') {
+            $parts = explode('::', $key, 2);
+
+            if (count($parts) === 2) {
+                $actualKey = $parts[1];
+            }
+        }
+
+        if (empty($context)) {
+            $context = $manager->findKeyContextInCode($actualKey);
+        }
+
+        try {
+            $results = $manager->translateKeyForLocales($actualKey, $baseValue, $targetLocales, $model, $defaultLang, $context);
+
+            if ($results !== null) {
+                return response()->json([
+                    'success' => true,
+                    'translations' => $results,
+                ]);
+            }
+        } catch (Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => false,
+            'error' => 'Failed to generate translations.',
+        ], 500);
+    }
+
+    public function saveMultiLang(Request $request): JsonResponse
+    {
+        $request->validate([
+            'key' => 'required|string',
+            'translations' => 'required|array',
+            'mode' => 'required|in:json,php',
+        ]);
+
+        $key = $request->input('key');
+        $translations = $request->input('translations');
+        $mode = $request->input('mode');
+
+        foreach ($translations as $locale => $translation) {
+            $saveRequest = new Request([
+                'key' => $key,
+                'translation' => $translation,
+                'target_locale' => $locale,
+                'mode' => $mode,
+            ]);
+            $this->save($saveRequest);
+        }
+
+        return response()->json(['success' => true]);
+    }
+
     public function save(Request $request): JsonResponse
     {
         $request->validate([
