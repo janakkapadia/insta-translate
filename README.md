@@ -5,7 +5,9 @@ A lightweight Laravel package that leverages AI (via `laravel/ai`) to automatica
 ## Features
 
 - **Automated Translation**: Diffs your base locale (`en.json`) against target locales and translates only the missing keys.
-- **Batched Requests**: Chunks translations to prevent hitting context window limits of AI models.
+- **Web Dashboard UI**: A beautiful, interactive dashboard to visually inspect missing translations, run AI translations in the browser, and review them before saving.
+- **Add New Languages**: Seamlessly add new target languages directly from the Web UI.
+- **Batched Generation & Rate Limiting**: Robustly handles thousands of missing translations by breaking them into automated batches of 100, including smart retry logic and 30-second cooldowns on API rate limits.
 - **Multiple AI Providers**: Use any provider supported by `laravel/ai` — Anthropic Claude, Google Gemini, OpenAI, and more.
 - **Glossary Protection**: Define brand names, technical terms, and locale-specific overrides that the AI must respect.
 - **Context-Aware**: Pass domain context (e.g., "SaaS billing dashboard") so the AI produces more accurate translations.
@@ -119,11 +121,21 @@ INSTA_TRANSLATE_GLOSSARY_PATH=./lang/glossary.json
 
 ## Dashboard Web UI
 
-InstaTranslate includes a beautiful, interactive web dashboard where you can visually inspect missing translations, run AI translations in the browser, and review them before saving.
+InstaTranslate includes a beautiful, interactive web dashboard where you can visually inspect missing translations, run AI translations in the browser, review them before saving, and even add new languages to your project.
 
-![Dashboard - Missing Translations](./art/dashboard-missing.png)
-![Dashboard - All Translations](./art/dashboard-all.png)
-![Dashboard - Sidebar](./art/dashboard-sidebar.png)
+<p align="center">
+  <a href="./art/dashboard-missing.png" target="_blank">
+    <img src="./art/dashboard-missing.png" alt="Dashboard - Missing Translations" width="32%" />
+  </a>
+  <a href="./art/dashboard-all.png" target="_blank">
+    <img src="./art/dashboard-all.png" alt="Dashboard - All Translations" width="32%" />
+  </a>
+  <a href="./art/dashboard-sidebar.png" target="_blank">
+    <img src="./art/dashboard-sidebar.png" alt="Dashboard - Sidebar" width="32%" />
+  </a>
+</p>
+
+*Click on any image to view it in full size.*
 
 1. Ensure the package service provider is registered (this is automatic in Laravel 11+).
 2. Visit `/insta-translate` in your browser (e.g. `https://your-app.test/insta-translate`).
