@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace InstaRequest\InstaTranslate\Console\Commands;
+namespace JanakKapadia\InstaTranslate\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
-use InstaRequest\InstaTranslate\Support\PhpArrayFileHandler;
-use InstaRequest\InstaTranslate\TranslationManager;
+use JanakKapadia\InstaTranslate\Support\PhpArrayFileHandler;
+use JanakKapadia\InstaTranslate\TranslationManager;
 use Symfony\Component\Finder\SplFileInfo;
 
 class TranslationPruneCommand extends Command

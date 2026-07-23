@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace InstaRequest\InstaTranslate;
+namespace JanakKapadia\InstaTranslate;
 
 use Exception;
 use Illuminate\Support\Facades\File;
-use InstaRequest\InstaTranslate\Support\PhpArrayFileHandler;
+use JanakKapadia\InstaTranslate\Support\PhpArrayFileHandler;
 use Laravel\Ai\AnonymousAgent;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Finder\SplFileInfo;

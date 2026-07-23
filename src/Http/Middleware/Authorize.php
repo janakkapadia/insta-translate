@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace InstaRequest\InstaTranslate\Http\Middleware;
+namespace JanakKapadia\InstaTranslate\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use InstaRequest\InstaTranslate\InstaTranslate;
+use JanakKapadia\InstaTranslate\InstaTranslate;
 use Symfony\Component\HttpFoundation\Response;
 
 class Authorize

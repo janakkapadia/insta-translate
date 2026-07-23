@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace InstaRequest\InstaTranslate\Support;
+namespace JanakKapadia\InstaTranslate\Support;
 
 use Illuminate\Support\Facades\File;
 

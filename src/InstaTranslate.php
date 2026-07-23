@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace InstaRequest\InstaTranslate;
+namespace JanakKapadia\InstaTranslate;
 
 use Closure;
 use Illuminate\Http\Request;

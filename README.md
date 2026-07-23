@@ -165,7 +165,7 @@ By default, you will only be able to access the dashboard in the `local` environ
 Use the `InstaTranslate::auth` method to define logic that determines whether the current request is allowed to access the dashboard:
 
 ```php
-use InstaRequest\InstaTranslate\InstaTranslate;
+use JanakKapadia\InstaTranslate\InstaTranslate;
 
 public function boot(): void
 {

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace InstaRequest\InstaTranslate;
+namespace JanakKapadia\InstaTranslate;
 
 use Illuminate\Support\ServiceProvider;
-use InstaRequest\InstaTranslate\Console\Commands\TranslationGenerateCommand;
-use InstaRequest\InstaTranslate\Console\Commands\TranslationPruneCommand;
+use JanakKapadia\InstaTranslate\Console\Commands\TranslationGenerateCommand;
+use JanakKapadia\InstaTranslate\Console\Commands\TranslationPruneCommand;
 
 class InstaTranslateServiceProvider extends ServiceProvider
 {

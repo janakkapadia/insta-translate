@@ -1,8 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use InstaRequest\InstaTranslate\Http\Controllers\DashboardController;
-use InstaRequest\InstaTranslate\Http\Middleware\Authorize;
+use JanakKapadia\InstaTranslate\Http\Controllers\DashboardController;
+use JanakKapadia\InstaTranslate\Http\Middleware\Authorize;
 
 Route::group([
     'domain' => config('insta-translate.domain', null),

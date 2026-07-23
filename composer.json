@@ -35,12 +35,12 @@
     },
     "autoload": {
         "psr-4": {
-            "InstaRequest\\InstaTranslate\\": "src/"
+            "JanakKapadia\\InstaTranslate\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "InstaRequest\\InstaTranslate\\Tests\\": "tests/",
+            "JanakKapadia\\InstaTranslate\\Tests\\": "tests/",
             "Workbench\\App\\": "workbench/app/",
             "Workbench\\Database\\Factories\\": "workbench/database/factories/",
             "Workbench\\Database\\Seeders\\": "workbench/database/seeders/"
@@ -90,7 +90,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "InstaRequest\\InstaTranslate\\InstaTranslateServiceProvider"
+                "JanakKapadia\\InstaTranslate\\InstaTranslateServiceProvider"
             ]
         }
     },
