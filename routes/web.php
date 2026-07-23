@@ -18,4 +18,5 @@ Route::group([
     Route::post('/api/generate-multi-lang', [DashboardController::class, 'generateMultiLang'])->name('insta-translate.api.generate-multi-lang');
     Route::post('/api/save', [DashboardController::class, 'save'])->name('insta-translate.api.save');
     Route::post('/api/save-multi-lang', [DashboardController::class, 'saveMultiLang'])->name('insta-translate.api.save-multi-lang');
+    Route::post('/api/add-language', [DashboardController::class, 'addLanguage'])->name('insta-translate.api.add-language');
 });

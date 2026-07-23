@@ -47,10 +47,12 @@ class DashboardController extends Controller
             'context' => 'nullable|string',
         ]);
 
-        $key = $request->input('key');
-        $baseValue = $request->input('base_value');
+        // Bypass TrimStrings middleware
+        $raw = json_decode($request->getContent(), true);
+        $key = $raw['key'] ?? $request->input('key');
+        $baseValue = $raw['base_value'] ?? $request->input('base_value');
         $targetLocale = $request->input('target_locale');
-        $context = $request->input('context');
+        $context = $raw['context'] ?? $request->input('context');
 
         $defaultLang = config('insta-translate.default_language') ?: 'en';
         $model = config('insta-translate.default_model') ?: 'claude';
@@ -208,10 +210,13 @@ class DashboardController extends Controller
             'context' => 'nullable|string',
         ]);
 
-        $key = $request->input('key');
-        $baseValue = $request->input('base_value');
         $targetLocales = $request->input('target_locales');
         $context = $request->input('context');
+
+        // Bypass TrimStrings
+        $raw = json_decode($request->getContent(), true);
+        $key = $raw['key'] ?? $request->input('key');
+        $baseValue = $raw['base_value'] ?? $request->input('base_value');
 
         $defaultLang = config('insta-translate.default_language') ?: 'en';
         $model = config('insta-translate.default_model') ?: 'claude';
@@ -261,9 +266,12 @@ class DashboardController extends Controller
             'mode' => 'required|in:json,php',
         ]);
 
-        $key = $request->input('key');
-        $translations = $request->input('translations');
         $mode = $request->input('mode');
+
+        // Bypass TrimStrings
+        $raw = json_decode($request->getContent(), true);
+        $key = $raw['key'] ?? $request->input('key');
+        $translations = $raw['translations'] ?? $request->input('translations');
 
         foreach ($translations as $locale => $translation) {
             $saveRequest = new Request([
@@ -287,10 +295,14 @@ class DashboardController extends Controller
             'mode' => 'required|in:json,php',
         ]);
 
-        $key = $request->input('key');
-        $translation = $request->input('translation');
         $targetLocale = $request->input('target_locale');
         $mode = $request->input('mode');
+
+        // Bypass TrimStrings
+        $raw = json_decode($request->getContent(), true);
+        $key = $raw['key'] ?? $request->input('key');
+        $translation = $raw['translation'] ?? $request->input('translation');
+
         $langDir = rtrim(config('insta-translate.lang_path') ?: (function_exists('lang_path') ? lang_path() : base_path('lang')), '/');
 
         if ($mode === 'php') {
@@ -334,6 +346,38 @@ class DashboardController extends Controller
             ksort($existingTranslations);
 
             File::put($localePath, json_encode($existingTranslations, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) ?: '{}');
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    public function addLanguage(Request $request): JsonResponse
+    {
+        $request->validate([
+            'target_locale' => 'required|string|regex:/^[a-zA-Z0-9_-]+$/',
+            'mode' => 'required|in:json,php',
+        ]);
+
+        $targetLocale = $request->input('target_locale');
+        $mode = $request->input('mode');
+        $langDir = rtrim(config('insta-translate.lang_path') ?: (function_exists('lang_path') ? lang_path() : base_path('lang')), '/');
+
+        if (! File::isDirectory($langDir)) {
+            File::makeDirectory($langDir, 0755, true);
+        }
+
+        if ($mode === 'php') {
+            $localePath = $langDir.'/'.$targetLocale;
+
+            if (! File::exists($localePath)) {
+                File::makeDirectory($localePath, 0755, true);
+            }
+        } else {
+            $localePath = $langDir.'/'.$targetLocale.'.json';
+
+            if (! File::exists($localePath)) {
+                File::put($localePath, '{}');
+            }
         }
 
         return response()->json(['success' => true]);
