@@ -203,6 +203,12 @@ class TranslationManager
             throw new Exception('Failed to parse JSON response: '.json_last_error_msg());
         }
 
+        array_walk_recursive($data, function (mixed &$value) {
+            if (is_string($value)) {
+                $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            }
+        });
+
         return $data;
     }
 
@@ -519,5 +525,50 @@ class TranslationManager
         }
 
         return $summary;
+    }
+
+    /**
+     * @param  array<string>  $targetLocales
+     * @return array<string, mixed>|null
+     */
+    public function translateKeyForLocales(string $key, string $baseValue, array $targetLocales, string $model, string $defaultLang, ?string $context = null): ?array
+    {
+        if (empty($targetLocales)) {
+            return [];
+        }
+
+        $contextLine = $context !== null ? "Context: {$context}\n" : '';
+
+        $localesString = implode(', ', $targetLocales);
+
+        $prompt = $contextLine.
+            "Translate the following string from {$defaultLang} into the following target locales: {$localesString}. ".
+            'Do not translate placeholders like :name or {value}. '.
+            "Return ONLY a valid JSON object where the keys are the target locale codes and the values are the translated strings. No markdown formatting or other text.\n\n".
+            "String to translate:\n{$baseValue}";
+
+        $actualModel = $this->resolveModelName($model);
+
+        $result = null;
+
+        if (str_starts_with($actualModel, 'claude')) {
+            $result = $this->callAi($prompt, $actualModel, 'anthropic');
+        } elseif (str_starts_with($actualModel, 'gemini') || str_starts_with($actualModel, 'gemma')) {
+            $result = $this->callAi($prompt, $actualModel, 'gemini');
+        } else {
+            throw new Exception("Unknown or unsupported model prefix: {$actualModel}");
+        }
+
+        if (is_array($result)) {
+            // Apply glossary overrides per locale
+            foreach ($targetLocales as $locale) {
+                if (isset($result[$locale])) {
+                    $overridden = $this->applyGlossaryOverrides([$key => $result[$locale]], $locale);
+                    $result[$locale] = $overridden[$key] ?? $result[$locale];
+                }
+            }
+        }
+
+        return $result;
     }
 }
