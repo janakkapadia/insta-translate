@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use InstaRequest\InstaTranslate\InstaTranslateServiceProvider;
+use JanakKapadia\InstaTranslate\InstaTranslateServiceProvider;
 
 it('loads the service provider', function () {
     $providers = app()->getLoadedProviders();

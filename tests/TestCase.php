@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace InstaRequest\InstaTranslate\Tests;
+namespace JanakKapadia\InstaTranslate\Tests;
 
-use InstaRequest\InstaTranslate\InstaTranslateServiceProvider;
+use JanakKapadia\InstaTranslate\InstaTranslateServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 
 abstract class TestCase extends Orchestra

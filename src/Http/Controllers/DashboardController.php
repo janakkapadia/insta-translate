@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace InstaRequest\InstaTranslate\Http\Controllers;
+namespace JanakKapadia\InstaTranslate\Http\Controllers;
 
 use Exception;
 use Illuminate\Contracts\View\View;
@@ -10,8 +10,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\File;
-use InstaRequest\InstaTranslate\Support\PhpArrayFileHandler;
-use InstaRequest\InstaTranslate\TranslationManager;
+use JanakKapadia\InstaTranslate\Support\PhpArrayFileHandler;
+use JanakKapadia\InstaTranslate\TranslationManager;
 use Throwable;
 
 class DashboardController extends Controller
