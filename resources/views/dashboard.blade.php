@@ -43,12 +43,23 @@
                     <p class="mt-1 text-sm text-gray-500">Review, generate, and edit translations across all locales.</p>
                 </div>
                 
-                <div class="flex space-x-3" x-show="tab === 'missing'">
-                    <button @click="generateAll()" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
-                        <svg class="-ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div class="flex space-x-3">
+                    <button @click="showAddLanguageModal = true" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                        <svg class="-ml-1 mr-2 h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Add Language
+                    </button>
+                    <button x-show="tab === 'missing'" @click="generateAll()" :disabled="isGeneratingAll" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors disabled:opacity-75 disabled:cursor-not-allowed">
+                        <svg x-show="!isGeneratingAll" class="-ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
-                        Generate All Missing
+                        <svg x-show="isGeneratingAll" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" x-cloak>
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span x-show="!isGeneratingAll">Generate All Missing</span>
+                        <span x-show="isGeneratingAll" x-text="`Generating (${batchProgress}/${batchTotal})...`" x-cloak></span>
                     </button>
                 </div>
             </div>
@@ -292,7 +303,7 @@
                                     <div class="bg-gray-50 rounded-md p-3 text-sm text-gray-700 whitespace-pre-wrap border border-gray-200 mb-4" x-text="typeof selectedData?.base_value === 'string' ? selectedData?.base_value : JSON.stringify(selectedData?.base_value, null, 2)"></div>
                                     
                                     <label for="translation_context" class="block text-sm font-medium text-gray-700 mb-1">Optional Context (helps AI translate better)</label>
-                                    <input type="text" id="translation_context" x-model="translationContext" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" placeholder="e.g. 'Button label on checkout page' or 'SaaS billing dashboard'">
+                                    <input type="text" id="translation_context" x-model="translationContext" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md px-3 py-2 border" placeholder="e.g. 'Button label on checkout page' or 'SaaS billing dashboard'">
                                 </div>
                                 
                                 <div class="flex space-x-3 mb-6">
@@ -364,6 +375,51 @@
                 </div>
             </div>
         </div>
+        <!-- Add Language Modal -->
+        <div x-show="showAddLanguageModal" class="fixed z-10 inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" x-cloak>
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div x-show="showAddLanguageModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="showAddLanguageModal = false"></div>
+
+                <!-- This element is to trick the browser into centering the modal contents. -->
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+                <div x-show="showAddLanguageModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+                    <div>
+                        <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100">
+                            <svg class="h-6 w-6 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                            </svg>
+                        </div>
+                        <div class="mt-3 text-center sm:mt-5">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                                Add New Language
+                            </h3>
+                            <div class="mt-2">
+                                <p class="text-sm text-gray-500">
+                                    Enter the locale code (e.g., 'es', 'fr', 'pt-BR') for the new language you want to add.
+                                </p>
+                            </div>
+                            <div class="mt-4">
+                                <input type="text" x-model="newLanguageCode" @keydown.enter="addLanguage" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md px-3 py-2 border" placeholder="Locale Code (e.g., fr)">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
+                        <button type="button" @click="addLanguage" :disabled="isAddingLanguage || !newLanguageCode" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:col-start-2 sm:text-sm disabled:opacity-50 flex items-center">
+                            <svg x-show="isAddingLanguage" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Add Language
+                        </button>
+                        <button type="button" @click="showAddLanguageModal = false" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:col-start-1 sm:text-sm">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <script>
@@ -376,6 +432,10 @@
                 isGeneratingBatch: false,
                 page: 1,
                 perPage: 50,
+                
+                showAddLanguageModal: false,
+                newLanguageCode: '',
+                isAddingLanguage: false,
                 
                 isSlideOverOpen: false,
                 selectedKey: '',
@@ -393,6 +453,11 @@
                     return Object.keys(this.slideOverGeneratedDrafts).some(locale => this.slideOverGeneratedDrafts[locale] !== null);
                 },
                 
+                isGeneratingAll: false,
+                batchProgress: 0,
+                batchTotal: 0,
+                
+                missingTranslationsList: {!! json_encode(collect($missingTranslations)->map(function($data, $key) { $data['key'] = $key; return $data; })->values()) !!},
                 allTranslationsList: {!! json_encode(collect($allTranslations)->map(function($data, $key) { $data['key'] = $key; return $data; })->values()) !!},
                 
                 get filteredList() {
@@ -505,8 +570,129 @@
                     }
                 },
 
-                generateAll() {
-                    this.$event.target.dispatchEvent(new CustomEvent('generate-all', { bubbles: true }));
+                async generateAll() {
+                    this.isGeneratingAll = true;
+                    this.batchProgress = 0;
+                    this.batchTotal = 0;
+                    
+                    const localeTasks = {};
+                    this.missingTranslationsList.forEach(item => {
+                        item.missing_in.forEach(locale => {
+                            if (!localeTasks[locale]) localeTasks[locale] = {};
+                            localeTasks[locale][item.key] = item.base_value;
+                            this.batchTotal++;
+                        });
+                    });
+                    
+                    if (this.batchTotal === 0) {
+                        this.isGeneratingAll = false;
+                        return;
+                    }
+                    
+                    for (const locale in localeTasks) {
+                        const keys = Object.keys(localeTasks[locale]);
+                        const chunkSize = 100;
+                        
+                        for (let i = 0; i < keys.length; i += chunkSize) {
+                            const chunkKeys = keys.slice(i, i + chunkSize);
+                            const chunkItems = {};
+                            chunkKeys.forEach(k => chunkItems[k] = localeTasks[locale][k]);
+                            
+                            // Reformat for /api/generate-batch API. 
+                            // Wait, the API takes `items` as an array of objects [{key, base_value}] 
+                            // Let's verify the API structure! 
+                            // Ah, in `regenerateBatch` we send: items = [{key: '...', base_value: '...'}]. 
+                            // Let's format it correctly!
+                            const itemsToRegenerate = chunkKeys.map(k => ({
+                                key: k,
+                                base_value: chunkItems[k]
+                            }));
+                            
+                            let retries = 0;
+                            let success = false;
+                            
+                            while (retries < 3 && !success) {
+                                try {
+                                    const response = await fetch('{{ route('insta-translate.api.generate-batch') }}', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                            'Accept': 'application/json'
+                                        },
+                                        body: JSON.stringify({
+                                            items: itemsToRegenerate,
+                                            target_locale: locale,
+                                            mode: '{{ $mode }}'
+                                        })
+                                    });
+                                    
+                                    const data = await response.json();
+                                    if (data.success) {
+                                        this.batchProgress += chunkKeys.length;
+                                        window.dispatchEvent(new CustomEvent('batch-resolved', { 
+                                            detail: { locale, translations: data.translations } 
+                                        }));
+                                        success = true;
+                                    } else {
+                                        console.error('Error generating batch:', data.error);
+                                        retries++;
+                                        if (retries < 3) {
+                                            console.log('Retrying in 30 seconds...');
+                                            await new Promise(resolve => setTimeout(resolve, 30000));
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error('Network error while generating batch:', e);
+                                    retries++;
+                                    if (retries < 3) {
+                                        console.log('Retrying in 30 seconds...');
+                                        await new Promise(resolve => setTimeout(resolve, 30000));
+                                    }
+                                }
+                            }
+                            
+                            if (!success) {
+                                const skip = confirm('Failed to process a batch for [' + locale + '] after 3 attempts. Do you want to skip this batch and continue with the rest?');
+                                if (!skip) {
+                                    this.isGeneratingAll = false;
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                    
+                    window.location.reload();
+                },
+                async addLanguage() {
+                    if (!this.newLanguageCode) return;
+                    this.isAddingLanguage = true;
+                    
+                    try {
+                        const response = await fetch('{{ route('insta-translate.api.add-language') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                target_locale: this.newLanguageCode,
+                                mode: '{{ $mode }}'
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        if (data.success) {
+                            window.location.reload();
+                        } else {
+                            alert('Error adding language: ' + (data.error || 'Unknown error'));
+                        }
+                    } catch (e) {
+                        alert('Network error while adding language.');
+                    } finally {
+                        this.isAddingLanguage = false;
+                    }
                 },
                 hasSearchResults() {
                     return this.filteredList.length > 0;
@@ -571,6 +757,7 @@
                         if (data.success) {
                             this.slideOverSaved[locale] = true;
                             this.selectedData.translations[locale] = translation;
+                            window.dispatchEvent(new CustomEvent('translation-saved', { detail: { key: this.selectedKey, locales: [locale] } }));
                             setTimeout(() => {
                                 this.slideOverSaved[locale] = false;
                             }, 2000);
@@ -712,6 +899,7 @@
                                     this.slideOverSaved[locale] = false;
                                 }, 2000);
                             }
+                            window.dispatchEvent(new CustomEvent('translation-saved', { detail: { key: this.selectedKey, locales: Object.keys(translationsToSave) } }));
                         } else {
                             alert('Error saving translations: ' + (data.error || 'Unknown error'));
                         }
@@ -740,12 +928,22 @@
                         this.resolved[l] = false;
                     });
 
-                    window.addEventListener('generate-all', () => {
-                        this.missingLocales.forEach(locale => {
-                            if (!this.hasDraft(locale) && !this.isResolved(locale)) {
-                                this.generate(locale);
-                            }
-                        });
+                    window.addEventListener('batch-resolved', (e) => {
+                        const { locale, translations } = e.detail;
+                        if (this.missingLocales.includes(locale) && translations[this.key] !== undefined) {
+                            this.drafts[locale] = translations[this.key];
+                            this.resolved[locale] = true;
+                        }
+                    });
+
+                    window.addEventListener('translation-saved', (e) => {
+                        if (e.detail.key === this.key) {
+                            e.detail.locales.forEach(l => {
+                                if (this.missingLocales.includes(l)) {
+                                    this.resolved[l] = true;
+                                }
+                            });
+                        }
                     });
                 },
 
