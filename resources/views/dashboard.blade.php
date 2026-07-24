@@ -43,7 +43,20 @@
                     <p class="mt-1 text-sm text-gray-500">Review, generate, and edit translations across all locales.</p>
                 </div>
                 
-                <div class="flex space-x-3">
+                <div class="flex space-x-3 items-center">
+                    <div class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white">
+                        <svg class="-ml-0.5 mr-2 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        </svg>
+                        <span class="text-xs text-gray-500 mr-2 font-normal">Batch Size:</span>
+                        <select x-model.number="batchSize" class="text-xs font-semibold text-gray-800 border-0 p-0 focus:ring-0 bg-transparent cursor-pointer">
+                            <option :value="25">25 / batch</option>
+                            <option :value="50">50 / batch</option>
+                            <option :value="100">100 / batch (Default)</option>
+                            <option :value="200">200 / batch</option>
+                            <option :value="500">500 / batch</option>
+                        </select>
+                    </div>
                     <button @click="showAddLanguageModal = true" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
                         <svg class="-ml-1 mr-2 h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -472,6 +485,7 @@
                 selectedLanguage: 'all',
                 selectedKeys: [],
                 isGeneratingBatch: false,
+                batchSize: 100,
                 page: 1,
                 perPage: 50,
                 
@@ -581,43 +595,54 @@
                     if (this.selectedKeys.length === 0 || this.selectedLanguage === 'all') return;
                     
                     this.isGeneratingBatch = true;
+                    const chunkSize = this.batchSize || 100;
+                    let totalGenerated = 0;
                     
-                    const itemsToRegenerate = this.selectedKeys.map(key => {
-                        const item = this.allTranslationsList.find(i => i.key === key);
-                        return { key: key, base_value: item.base_value };
-                    });
-                    
-                    try {
-                        const response = await fetch('{{ route('insta-translate.api.generate-batch') }}', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                'Accept': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                items: itemsToRegenerate,
-                                target_locale: this.selectedLanguage
-                            })
+                    for (let i = 0; i < this.selectedKeys.length; i += chunkSize) {
+                        const chunkKeys = this.selectedKeys.slice(i, i + chunkSize);
+                        const itemsToRegenerate = chunkKeys.map(key => {
+                            const item = this.allTranslationsList.find(k => k.key === key);
+                            return { key: key, base_value: item ? item.base_value : '' };
                         });
                         
-                        const data = await response.json();
-                        if (data.success && data.translations) {
-                            for (const key in data.translations) {
-                                const item = this.allTranslationsList.find(i => i.key === key);
-                                if (item) {
-                                    item.translations[this.selectedLanguage] = data.translations[key];
+                        try {
+                            const response = await fetch('{{ route('insta-translate.api.generate-batch') }}', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    'Accept': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    items: itemsToRegenerate,
+                                    target_locale: this.selectedLanguage,
+                                    mode: '{{ $mode }}'
+                                })
+                            });
+                            
+                            const data = await response.json();
+                            if (data.success && data.translations) {
+                                for (const key in data.translations) {
+                                    const item = this.allTranslationsList.find(k => k.key === key);
+                                    if (item) {
+                                        item.translations[this.selectedLanguage] = data.translations[key];
+                                    }
                                 }
+                                totalGenerated += Object.keys(data.translations).length;
+                            } else {
+                                alert('Error: ' + (data.error || 'Unknown error'));
+                                break;
                             }
-                            this.selectedKeys = [];
-                            alert('Successfully regenerated ' + Object.keys(data.translations).length + ' translations!');
-                        } else {
-                            alert('Error: ' + (data.error || 'Unknown error'));
+                        } catch (e) {
+                            alert('Network error while generating batch.');
+                            break;
                         }
-                    } catch (e) {
-                        alert('Network error while generating batch.');
-                    } finally {
-                        this.isGeneratingBatch = false;
+                    }
+                    
+                    this.selectedKeys = [];
+                    this.isGeneratingBatch = false;
+                    if (totalGenerated > 0) {
+                        alert('Successfully regenerated ' + totalGenerated + ' translations!');
                     }
                 },
 
@@ -642,7 +667,7 @@
                     
                     for (const locale in localeTasks) {
                         const keys = Object.keys(localeTasks[locale]);
-                        const chunkSize = 100;
+                        const chunkSize = this.batchSize || 100;
                         
                         for (let i = 0; i < keys.length; i += chunkSize) {
                             const chunkKeys = keys.slice(i, i + chunkSize);
