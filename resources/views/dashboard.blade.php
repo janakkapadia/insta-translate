@@ -43,27 +43,14 @@
                     <p class="mt-1 text-sm text-gray-500">Review, generate, and edit translations across all locales.</p>
                 </div>
                 
-                <div class="flex space-x-3 items-center">
-                    <div class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white">
-                        <svg class="-ml-0.5 mr-2 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                        </svg>
-                        <span class="text-xs text-gray-500 mr-2 font-normal">Batch Size:</span>
-                        <select x-model.number="batchSize" class="text-xs font-semibold text-gray-800 border-0 p-0 focus:ring-0 bg-transparent cursor-pointer">
-                            <option value="25">25 / batch</option>
-                            <option value="50">50 / batch</option>
-                            <option value="100" selected>100 / batch (Default)</option>
-                            <option value="200">200 / batch</option>
-                            <option value="500">500 / batch</option>
-                        </select>
-                    </div>
+                <div class="flex space-x-3">
                     <button @click="showAddLanguageModal = true" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
                         <svg class="-ml-1 mr-2 h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                         </svg>
                         Add Language
                     </button>
-                    <button x-show="tab === 'missing'" @click="generateAll()" :disabled="isGeneratingAll" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors disabled:opacity-75 disabled:cursor-not-allowed">
+                    <button x-show="tab === 'missing'" @click="showGenerateAllModal = true" :disabled="isGeneratingAll" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors disabled:opacity-75 disabled:cursor-not-allowed">
                         <svg x-show="!isGeneratingAll" class="-ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
@@ -445,6 +432,59 @@
             </div>
         </div>
 
+        <!-- Generate All Missing Modal -->
+        <div x-show="showGenerateAllModal" class="fixed z-10 inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" x-cloak>
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div x-show="showGenerateAllModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="showGenerateAllModal = false"></div>
+
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+                <div x-show="showGenerateAllModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+                    <div>
+                        <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100">
+                            <svg class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </div>
+                        <div class="mt-3 text-center sm:mt-5">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                                Generate All Missing Translations
+                            </h3>
+                            <div class="mt-2">
+                                <p class="text-sm text-gray-500">
+                                    Auto-generate missing translations across all locales using AI. Choose your preferred batch size below.
+                                </p>
+                            </div>
+
+                            <div class="mt-4 bg-gray-50 p-4 rounded-md border border-gray-200 text-left space-y-3">
+                                <div>
+                                    <label for="modal_batch_size" class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">Batch Size</label>
+                                    <select id="modal_batch_size" x-model.number="batchSize" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md px-3 py-2 border bg-white">
+                                        <option value="25">25 items / batch</option>
+                                        <option value="50">50 items / batch</option>
+                                        <option value="100" selected>100 items / batch (Default)</option>
+                                        <option value="200">200 items / batch</option>
+                                        <option value="500">500 items / batch</option>
+                                    </select>
+                                    <p class="mt-1.5 text-xs text-gray-500">
+                                        Default is 100 items per batch request. Smaller batch sizes prevent timeouts on large translation lists.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
+                        <button type="button" @click="showGenerateAllModal = false; generateAll()" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:col-start-2 sm:text-sm">
+                            Start Generation
+                        </button>
+                        <button type="button" @click="showGenerateAllModal = false" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:col-start-1 sm:text-sm">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <script>
@@ -490,6 +530,7 @@
                 perPage: 50,
                 
                 showAddLanguageModal: false,
+                showGenerateAllModal: false,
                 newLanguageCode: '',
                 isAddingLanguage: false,
 
