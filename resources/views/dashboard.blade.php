@@ -50,11 +50,11 @@
                         </svg>
                         <span class="text-xs text-gray-500 mr-2 font-normal">Batch Size:</span>
                         <select x-model.number="batchSize" class="text-xs font-semibold text-gray-800 border-0 p-0 focus:ring-0 bg-transparent cursor-pointer">
-                            <option :value="25">25 / batch</option>
-                            <option :value="50">50 / batch</option>
-                            <option :value="100">100 / batch (Default)</option>
-                            <option :value="200">200 / batch</option>
-                            <option :value="500">500 / batch</option>
+                            <option value="25">25 / batch</option>
+                            <option value="50">50 / batch</option>
+                            <option value="100" selected>100 / batch (Default)</option>
+                            <option value="200">200 / batch</option>
+                            <option value="500">500 / batch</option>
                         </select>
                     </div>
                     <button @click="showAddLanguageModal = true" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
