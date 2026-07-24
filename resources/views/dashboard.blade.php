@@ -132,7 +132,7 @@
 
                                             <div class="flex justify-between items-center mb-2">
                                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                    <span x-text="locale"></span>
+                                                    <span x-text="langName(locale)"></span>
                                                 </span>
                                                 
                                                 <div class="flex space-x-2">
@@ -179,7 +179,7 @@
                     <input type="text" x-model="searchQuery" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-2 border" placeholder="Search keys or base values...">
                 </div>
                 <div class="sm:w-48">
-                    <select x-model="selectedLanguage" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-2 px-3 border">
+                    <select x-model="selectedLanguage" x-init="$nextTick(() => { $el.querySelectorAll('option:not([value=all])').forEach(o => { if(window._langMap[o.value]) o.textContent = window._langMap[o.value] + ' (' + o.value + ')'; }); })" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-2 px-3 border">
                         <option value="all">All Languages</option>
                         @foreach($locales as $locale)
                         <option value="{{ $locale }}">{{ $locale }}</option>
@@ -327,7 +327,7 @@
                                     <template x-for='locale in {!! json_encode($locales) !!}' :key="locale">
                                         <div class="bg-white border rounded-lg overflow-hidden shadow-sm focus-within:ring-1 focus-within:ring-indigo-500 focus-within:border-indigo-500">
                                             <div class="bg-gray-50 px-3 py-2 border-b flex justify-between items-center">
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800" x-text="locale"></span>
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800" x-text="langName(locale)"></span>
                                                 <span x-show="slideOverSaved[locale]" class="text-green-600 text-xs font-medium flex items-center" x-cloak>
                                                     <svg class="mr-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                                                     Saved
@@ -383,7 +383,7 @@
                 <!-- This element is to trick the browser into centering the modal contents. -->
                 <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-                <div x-show="showAddLanguageModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+                <div x-show="showAddLanguageModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-visible shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
                     <div>
                         <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100">
                             <svg class="h-6 w-6 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -396,11 +396,23 @@
                             </h3>
                             <div class="mt-2">
                                 <p class="text-sm text-gray-500">
-                                    Enter the locale code (e.g., 'es', 'fr', 'pt-BR') for the new language you want to add.
+                                    Select the language you want to add from the list below.
                                 </p>
                             </div>
                             <div class="mt-4">
-                                <input type="text" x-model="newLanguageCode" @keydown.enter="addLanguage" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md px-3 py-2 border" placeholder="Locale Code (e.g., fr)">
+                                <div class="relative" x-data="{ langQuery: '', showLangDropdown: false }" @click.away="showLangDropdown = false">
+                                    <input type="text" x-model="langQuery" @focus="showLangDropdown = true" @input="showLangDropdown = true" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md px-3 py-2 border" placeholder="Search languages...">
+                                    <div x-show="showLangDropdown" x-cloak class="absolute z-20 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm text-left">
+                                        <template x-for="lang in availableLanguages.filter(l => !langQuery || l.name.toLowerCase().includes(langQuery.toLowerCase()) || l.code.toLowerCase().includes(langQuery.toLowerCase()))" :key="lang.code">
+                                            <div @click="langQuery = lang.name + ' (' + lang.code + ')'; showLangDropdown = false; newLanguageCode = lang.code;" class="cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-indigo-50 transition-colors" :class="newLanguageCode === lang.code ? 'bg-indigo-50 text-indigo-700' : 'text-gray-900'">
+                                                <span class="block truncate" x-text="lang.name + ' (' + lang.code + ')'"></span>
+                                            </div>
+                                        </template>
+                                        <div x-show="langQuery.length > 0 && availableLanguages.filter(l => l.name.toLowerCase().includes(langQuery.toLowerCase()) || l.code.toLowerCase().includes(langQuery.toLowerCase())).length === 0" class="py-3 text-sm text-gray-500 text-center">
+                                            No languages found.
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -423,6 +435,36 @@
     </main>
 
     <script>
+        // Comprehensive language name map
+        window._langMap = {
+            'af': 'Afrikaans', 'am': 'Amharic', 'ar': 'Arabic', 'az': 'Azerbaijani',
+            'be': 'Belarusian', 'bg': 'Bulgarian', 'bn': 'Bengali', 'bs': 'Bosnian',
+            'ca': 'Catalan', 'cs': 'Czech', 'cy': 'Welsh', 'da': 'Danish',
+            'de': 'German', 'el': 'Greek', 'en': 'English', 'es': 'Spanish',
+            'et': 'Estonian', 'eu': 'Basque', 'fa': 'Persian', 'fi': 'Finnish',
+            'fil': 'Filipino', 'fr': 'French', 'ga': 'Irish', 'gl': 'Galician',
+            'gu': 'Gujarati', 'ha': 'Hausa', 'he': 'Hebrew', 'hi': 'Hindi',
+            'hr': 'Croatian', 'hu': 'Hungarian', 'hy': 'Armenian', 'id': 'Indonesian',
+            'ig': 'Igbo', 'is': 'Icelandic', 'it': 'Italian', 'ja': 'Japanese',
+            'jv': 'Javanese', 'ka': 'Georgian', 'kk': 'Kazakh', 'km': 'Khmer',
+            'kn': 'Kannada', 'ko': 'Korean', 'ku': 'Kurdish', 'ky': 'Kyrgyz',
+            'lo': 'Lao', 'lt': 'Lithuanian', 'lv': 'Latvian', 'mg': 'Malagasy',
+            'mk': 'Macedonian', 'ml': 'Malayalam', 'mn': 'Mongolian', 'mr': 'Marathi',
+            'ms': 'Malay', 'mt': 'Maltese', 'my': 'Burmese', 'nb': 'Norwegian Bokmål',
+            'ne': 'Nepali', 'nl': 'Dutch', 'nn': 'Norwegian Nynorsk', 'no': 'Norwegian',
+            'or': 'Odia', 'pa': 'Punjabi', 'pl': 'Polish', 'ps': 'Pashto',
+            'pt': 'Portuguese', 'pt-BR': 'Portuguese (Brazil / Brasil)', 'pt-PT': 'Portuguese (Portugal)', 'ro': 'Romanian',
+            'ru': 'Russian', 'rw': 'Kinyarwanda', 'si': 'Sinhala', 'sk': 'Slovak',
+            'sl': 'Slovenian', 'so': 'Somali', 'sq': 'Albanian', 'sr': 'Serbian',
+            'sv': 'Swedish', 'sw': 'Swahili', 'ta': 'Tamil', 'te': 'Telugu',
+            'tg': 'Tajik', 'th': 'Thai', 'tk': 'Turkmen', 'tl': 'Tagalog',
+            'tr': 'Turkish', 'uk': 'Ukrainian', 'ur': 'Urdu', 'uz': 'Uzbek',
+            'vi': 'Vietnamese', 'xh': 'Xhosa', 'yo': 'Yoruba', 'zh': 'Chinese',
+            'zh-CN': 'Chinese (Simplified)', 'zh-TW': 'Chinese (Traditional)',
+            'zu': 'Zulu'
+        };
+
+
         function translationDashboard() {
             return {
                 tab: 'missing',
@@ -436,6 +478,11 @@
                 showAddLanguageModal: false,
                 newLanguageCode: '',
                 isAddingLanguage: false,
+
+                availableLanguages: Object.entries(window._langMap)
+                    .map(([code, name]) => ({ code, name }))
+                    .filter(lang => lang.code !== '{{ $defaultLang }}' && !{!! json_encode($locales) !!}.includes(lang.code))
+                    .sort((a, b) => a.name.localeCompare(b.name)),
                 
                 isSlideOverOpen: false,
                 selectedKey: '',
@@ -459,6 +506,10 @@
                 
                 missingTranslationsList: {!! json_encode(collect($missingTranslations)->map(function($data, $key) { $data['key'] = $key; return $data; })->values()) !!},
                 allTranslationsList: {!! json_encode(collect($allTranslations)->map(function($data, $key) { $data['key'] = $key; return $data; })->values()) !!},
+
+                langName(code) {
+                    return window._langMap[code] ? window._langMap[code] + ' (' + code + ')' : code;
+                },
                 
                 get filteredList() {
                     let list = this.allTranslationsList;
