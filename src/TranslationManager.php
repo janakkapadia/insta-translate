@@ -83,19 +83,144 @@ class TranslationManager
     {
         $specificTranslations = $this->glossary['specific_translations'] ?? [];
 
-        foreach ($translations as $key => $value) {
-            if (! is_string($value)) {
-                continue;
-            }
+        if (empty($specificTranslations)) {
+            return $translations;
+        }
 
-            foreach ($specificTranslations as $term => $locales) {
-                if (isset($locales[$targetLocale]) && stripos($value, $term) !== false) {
-                    $translations[$key] = str_ireplace($term, $locales[$targetLocale], $value);
+        foreach ($translations as $key => $value) {
+            if (is_string($value)) {
+                foreach ($specificTranslations as $term => $locales) {
+                    if (isset($locales[$targetLocale]) && stripos($value, $term) !== false) {
+                        $value = str_ireplace($term, $locales[$targetLocale], $value);
+                    }
                 }
+                $translations[$key] = $value;
+            } elseif (is_array($value)) {
+                foreach ($value as $idx => $variation) {
+                    if (is_string($variation)) {
+                        foreach ($specificTranslations as $term => $locales) {
+                            if (isset($locales[$targetLocale]) && stripos($variation, $term) !== false) {
+                                $variation = str_ireplace($term, $locales[$targetLocale], $variation);
+                            }
+                        }
+                        $value[$idx] = $variation;
+                    }
+                }
+                $translations[$key] = $value;
             }
         }
 
         return $translations;
+    }
+
+    /**
+     * Mask placeholders in a translation chunk before sending to the AI model.
+     *
+     * @param  array<string, mixed>  $chunk
+     * @return array{masked: array<string, mixed>, token_map: array<string, string>}
+     */
+    public function maskPlaceholdersInChunk(array $chunk): array
+    {
+        $masked = [];
+        $tokenMap = [];
+        $placeholderToToken = [];
+        $counter = 0;
+
+        foreach ($chunk as $key => $value) {
+            if (is_string($value)) {
+                $masked[$key] = $this->maskString($value, $tokenMap, $placeholderToToken, $counter);
+            } else {
+                $masked[$key] = $value;
+            }
+        }
+
+        return [
+            'masked' => $masked,
+            'token_map' => $tokenMap,
+        ];
+    }
+
+    /**
+     * Mask placeholders in a single string before sending to the AI model.
+     *
+     * @return array{masked: string, token_map: array<string, string>}
+     */
+    public function maskPlaceholdersInString(string $text): array
+    {
+        $tokenMap = [];
+        $placeholderToToken = [];
+        $counter = 0;
+
+        $masked = $this->maskString($text, $tokenMap, $placeholderToToken, $counter);
+
+        return [
+            'masked' => $masked,
+            'token_map' => $tokenMap,
+        ];
+    }
+
+    /**
+     * Mask all colon-prefixed and curly-brace placeholders in a string.
+     *
+     * @param  array<string, string>  $tokenMap
+     * @param  array<string, string>  $placeholderToToken
+     */
+    private function maskString(string $text, array &$tokenMap, array &$placeholderToToken, int &$counter): string
+    {
+        $pattern = '/(?:\{\{\s*\$?[a-zA-Z0-9_.-]+\s*\}\}|\{\s*\$?[a-zA-Z0-9_.-]+\s*\}|(?<![a-zA-Z0-9_:]):([a-zA-Z_][a-zA-Z0-9_]*))/';
+
+        return preg_replace_callback($pattern, function (array $matches) use (&$tokenMap, &$placeholderToToken, &$counter): string {
+            $placeholder = $matches[0];
+
+            if (isset($placeholderToToken[$placeholder])) {
+                return $placeholderToToken[$placeholder];
+            }
+
+            $token = "__IT_VAR_{$counter}__";
+            $counter++;
+
+            $placeholderToToken[$placeholder] = $token;
+            $tokenMap[$token] = $placeholder;
+
+            return $token;
+        }, $text) ?? $text;
+    }
+
+    /**
+     * Restore masked placeholder tokens in translated content.
+     *
+     * @param  string|array<mixed>  $content
+     * @param  array<string, string>  $tokenMap
+     * @return string|array<mixed>
+     */
+    public function restorePlaceholders(string|array $content, array $tokenMap): string|array
+    {
+        if (empty($tokenMap)) {
+            return $content;
+        }
+
+        if (is_array($content)) {
+            $restored = [];
+            foreach ($content as $key => $value) {
+                $restored[$key] = is_string($value) || is_array($value)
+                    ? $this->restorePlaceholders($value, $tokenMap)
+                    : $value;
+            }
+
+            return $restored;
+        }
+
+        // Step 1: Direct token replacement
+        $result = strtr($content, $tokenMap);
+
+        // Step 2: Resilient regex replacement for case-insensitive or whitespace variations (e.g. __ IT_VAR_0 __ or __it_var_0__)
+        $result = preg_replace_callback('/_{1,2}\s*IT_VAR_(\d+)\s*_{1,2}/i', function (array $matches) use ($tokenMap): string {
+            $standardToken = "__IT_VAR_{$matches[1]}__";
+
+            return $tokenMap[$standardToken] ?? $matches[0];
+        }, $result) ?? $result;
+
+        return $result;
     }
 
     /**
@@ -104,35 +229,56 @@ class TranslationManager
      */
     public function translateChunk(array $chunk, string $targetLocale, string $model, string $defaultLang, bool $multiple = false, ?string $context = null): ?array
     {
+        $maskedData = $this->maskPlaceholdersInChunk($chunk);
+        /** @var array<string, string> $chunkToSend */
+        $chunkToSend = $maskedData['masked'];
+        $tokenMap = $maskedData['token_map'];
+
         $glossaryInstructions = $this->buildGlossaryPrompt($targetLocale);
         $contextLine = $context !== null ? "Context: {$context}\n" : '';
+
+        $placeholderInstructions = ! empty($tokenMap)
+            ? 'IMPORTANT: Placeholder tokens like __IT_VAR_0__, __IT_VAR_1__ represent variables (such as :name, :attribute, or {value}) and must NEVER be translated, modified, or omitted. Preserve every __IT_VAR_X__ token exactly as-is in your output at the grammatically appropriate position. '
+            : 'Do not translate variables or placeholders. ';
 
         if ($multiple) {
             $prompt = $contextLine.
                 "Translate the following JSON key-value pairs from {$defaultLang} to {$targetLocale}. ".
-                'Keep the keys exactly the same. Do not translate placeholders like :name or {value}. '.
+                'Keep the keys exactly the same. '.
+                $placeholderInstructions.
                 $glossaryInstructions.
                 'Provide 3 distinct translation variations for each key. '.
                 "Return ONLY a valid JSON object where keys are the same, and the value is a JSON array of 3 strings. No markdown formatting or other text.\n\n".
-                json_encode($chunk, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                json_encode($chunkToSend, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         } else {
             $prompt = $contextLine.
                 "Translate the following JSON key-value pairs from {$defaultLang} to {$targetLocale}. ".
-                'Keep the keys exactly the same. Do not translate placeholders like :name or {value}. '.
+                'Keep the keys exactly the same. '.
+                $placeholderInstructions.
                 $glossaryInstructions.
                 "Return ONLY a valid JSON object without markdown formatting or other text.\n\n".
-                json_encode($chunk, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                json_encode($chunkToSend, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         }
 
         $actualModel = $this->resolveModelName($model);
 
+        $result = null;
+
         if (str_starts_with($actualModel, 'claude')) {
-            return $this->callAi($prompt, $actualModel, 'anthropic');
+            $result = $this->callAi($prompt, $actualModel, 'anthropic');
         } elseif (str_starts_with($actualModel, 'gemini') || str_starts_with($actualModel, 'gemma')) {
-            return $this->callAi($prompt, $actualModel, 'gemini');
+            $result = $this->callAi($prompt, $actualModel, 'gemini');
+        } else {
+            throw new Exception("Unknown or unsupported model prefix: {$actualModel}");
         }
 
-        throw new Exception("Unknown or unsupported model prefix: {$actualModel}");
+        if (is_array($result)) {
+            $result = $this->applyGlossaryOverrides($result, $targetLocale);
+            /** @var array<string, mixed> $result */
+            $result = $this->restorePlaceholders($result, $tokenMap);
+        }
+
+        return $result;
     }
 
     public function resolveModelName(string $model): string
@@ -161,7 +307,8 @@ class TranslationManager
 
         while (true) {
             try {
-                $agent = new AnonymousAgent('You are a helpful translation assistant.', [], []);
+                $systemPrompt = 'You are a professional localization and translation assistant. You accurately translate text while strictly preserving all placeholder tokens, formatting, and variables.';
+                $agent = new AnonymousAgent($systemPrompt, [], []);
                 $response = $agent->prompt($prompt, [], $provider, $model);
 
                 return $this->parseJsonResponse($response->text);
@@ -537,15 +684,23 @@ class TranslationManager
             return [];
         }
 
+        $maskedData = $this->maskPlaceholdersInString($baseValue);
+        $valueToSend = $maskedData['masked'];
+        $tokenMap = $maskedData['token_map'];
+
         $contextLine = $context !== null ? "Context: {$context}\n" : '';
+
+        $placeholderInstructions = ! empty($tokenMap)
+            ? 'IMPORTANT: Placeholder tokens like __IT_VAR_0__, __IT_VAR_1__ represent variables (such as :name, :attribute, or {value}) and must NEVER be translated, modified, or omitted. Preserve every __IT_VAR_X__ token exactly as-is in your output at the grammatically appropriate position. '
+            : 'Do not translate variables or placeholders. ';
 
         $localesString = implode(', ', $targetLocales);
 
         $prompt = $contextLine.
             "Translate the following string from {$defaultLang} into the following target locales: {$localesString}. ".
-            'Do not translate placeholders like :name or {value}. '.
+            $placeholderInstructions.
             "Return ONLY a valid JSON object where the keys are the target locale codes and the values are the translated strings. No markdown formatting or other text.\n\n".
-            "String to translate:\n{$baseValue}";
+            "String to translate:\n{$valueToSend}";
 
         $actualModel = $this->resolveModelName($model);
 
@@ -567,6 +722,9 @@ class TranslationManager
                     $result[$locale] = $overridden[$key] ?? $result[$locale];
                 }
             }
+
+            /** @var array<string, mixed> $result */
+            $result = $this->restorePlaceholders($result, $tokenMap);
         }
 
         return $result;

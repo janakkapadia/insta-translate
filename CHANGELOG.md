@@ -1,6 +1,12 @@
 # Release Notes
 
-## [Unreleased](https://github.com/janakkapadia/insta-translate/compare/v1.0.8...HEAD)
+## [Unreleased](https://github.com/janakkapadia/insta-translate/compare/v1.1.6...HEAD)
+
+## [v1.1.6](https://github.com/janakkapadia/insta-translate/compare/v1.1.5...v1.1.6) - 2026-10-15
+
+### Fixed
+
+- **Preserve Variable Placeholders**: Added automatic pre-processing masking and post-processing restoration for colon-prefixed variables (`:name`, `:attribute`, `:min`, `:count`, etc.) and curly-brace variables (`{name}`, `{{count}}`, `{$name}`, etc.) to prevent AI translation models from translating or altering localization placeholders.
 
 ## [v1.0.8](https://github.com/janakkapadia/insta-translate/compare/v1.0.7...v1.0.8) - 2026-07-22
 
